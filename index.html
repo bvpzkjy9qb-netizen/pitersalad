@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Новогодние салаты</title>
+<style>
+    body {
+        margin: 0;
+        background: black;
+        overflow: hidden;
+        touch-action: none;
+        font-family: monospace;
+    }
+    canvas {
+        image-rendering: pixelated;
+        display: block;
+        margin: 0 auto;
+        background: #001122;
+    }
+</style>
+</head>
+<body>
+
+<canvas id="game" width="320" height="480"></canvas>
+
+<audio id="music" src="music.mp3" loop></audio>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+ctx.imageSmoothingEnabled = false;
+
+const music = document.getElementById("music");
+music.volume = 0.4;
+document.body.addEventListener("click", () => music.play(), { once:true });
+
+let player = {
+    x: 140,
+    y: 400,
+    w: 24,
+    h: 32,
+    speed: 3
+};
+
+let salads = [];
+let snowflakes = [];
+let lives = 5;
+let score = 0;
+let gameOver = false;
+
+// ─────────── Управление ───────────
+let left = false;
+let right = false;
+
+document.addEventListener("keydown", e => {
+    if (e.key === "ArrowLeft") left = true;
+    if (e.key === "ArrowRight") right = true;
+});
+document.addEventListener("keyup", e => {
+    if (e.key === "ArrowLeft") left = false;
+    if (e.key === "ArrowRight") right = false;
+});
+
+// Мобильный наклон
+window.addEventListener("deviceorientation", e => {
+    if (e.gamma > 5) right = true;
+    else right = false;
+    if (e.gamma < -5) left = true;
+    else left = false;
+});
+
+// Тач
+canvas.addEventListener("touchmove", e => {
+    const touchX = e.touches[0].clientX;
+    player.x = touchX / window.innerWidth * canvas.width - player.w/2;
+});
+
+// ─────────── Создание объектов ───────────
+function spawnSalad() {
+    salads.push({
+        x: Math.random() * (canvas.width - 16),
+        y: canvas.height + 16,
+        speed: 1.5 + Math.random()
+    });
+}
+
+function spawnSnow() {
+    snowflakes.push({
+        x: Math.random() * canvas.width,
+        y: -5,
+        speed: 0.5 + Math.random()
+    });
+}
+
+// ─────────── Рисование ───────────
+function drawPlayer() {
+    ctx.fillStyle = "#555"; // пальто
+    ctx.fillRect(player.x, player.y, player.w, player.h);
+
+    ctx.fillStyle = "red"; // шарф
+    ctx.fillRect(player.x, player.y + 8, player.w, 4);
+
+    ctx.fillStyle = "#ffe0bd"; // лицо
+    ctx.fillRect(player.x + 6, player.y - 8, 12, 8);
+}
+
+function drawSalad(s) {
+    ctx.fillStyle = "white";
+    ctx.fillRect(s.x, s.y, 16, 6);
+    ctx.fillStyle = "green";
+    ctx.fillRect(s.x+2, s.y+2, 12, 3);
+}
+
+function drawLives() {
+    for (let i = 0; i < lives; i++) {
+        ctx.fillStyle = "green";
+        ctx.fillRect(260 + i*12, 10, 8, 12);
+        ctx.fillStyle = "yellow";
+        ctx.fillRect(264 + i*12, 6, 2, 4);
+    }
+}
+
+function drawSnow(f) {
+    ctx.fillStyle = "white";
+    ctx.fillRect(f.x, f.y, 2, 2);
+}
+
+// ─────────── Логика ───────────
+function update() {
+    if (gameOver) return;
+
+    if (left) player.x -= player.speed;
+    if (right) player.x += player.speed;
+
+    player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
+
+    if (Math.random() < 0.02) spawnSalad();
+    if (Math.random() < 0.2) spawnSnow();
+
+    salads.forEach((s, i) => {
+        s.y -= s.speed;
+
+        if (
+            s.x < player.x + player.w &&
+            s.x + 16 > player.x &&
+            s.y < player.y + player.h &&
+            s.y + 6 > player.y
+        ) {
+            salads.splice(i, 1);
+            score++;
+        } else if (s.y < -10) {
+            salads.splice(i, 1);
+            lives--;
+            if (lives <= 0) gameOver = true;
+        }
+    });
+
+    snowflakes.forEach((f, i) => {
+        f.y += f.speed;
+        if (f.y > canvas.height) snowflakes.splice(i,1);
+    });
+}
+
+function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    snowflakes.forEach(drawSnow);
+    salads.forEach(drawSalad);
+    drawPlayer();
+    drawLives();
+
+    ctx.fillStyle = "white";
+    ctx.fillText("Салаты: " + score, 10, 20);
+
+    if (gameOver) {
+        ctx.fillStyle = "rgba(0,0,0,0.7)";
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle = "white";
+        ctx.textAlign = "center";
+        ctx.fillText("Игра окончена", canvas.width/2, 200);
+        ctx.fillText("Собрано салатов: " + score, canvas.width/2, 230);
+        ctx.fillText(
+            "Вы не смогли съесть все",
+            canvas.width/2, 260
+        );
+        ctx.fillText(
+            "новогодние салаты,",
+            canvas.width/2, 280
+        );
+        ctx.fillText(
+            "придется отдать часть",
+            canvas.width/2, 300
+        );
+        ctx.fillText(
+            "друзьям и родственникам",
+            canvas.width/2, 320
+        );
+    }
+}
+
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>
