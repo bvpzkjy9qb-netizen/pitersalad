@@ -5,18 +5,18 @@
 <title>Мандариновый петербуржец</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    background: #0b1d4d;
-    overflow: hidden;
-    font-family: Arial, sans-serif;
-  }
-  canvas {
-    display: block;
-    margin: 0 auto;
-    image-rendering: pixelated;
-  }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #0b1d4d;
+  overflow: hidden;
+  font-family: Arial, sans-serif;
+}
+canvas {
+  display: block;
+  margin: 0 auto;
+  image-rendering: pixelated;
+}
 </style>
 </head>
 <body>
@@ -41,66 +41,69 @@ function resize() {
 window.addEventListener("resize", resize);
 resize();
 
-/* ========= СОСТОЯНИЯ ========= */
+/* ===== СОСТОЯНИЕ ===== */
 let state = "start";
 let score = 0;
 let lives = 5;
 
-/* ========= УПРАВЛЕНИЕ ========= */
+/* ===== УПРАВЛЕНИЕ ===== */
 const keys = {};
 window.addEventListener("keydown", e => keys[e.key] = true);
 window.addEventListener("keyup", e => keys[e.key] = false);
-
 canvas.addEventListener("click", () => {
   if (state !== "play") restart();
 });
 
-/* ========= ПЕРСОНАЖ ========= */
+/* ===== ПЕРСОНАЖ ===== */
 const player = {
   x: canvas.width / 2,
   y: canvas.height - 180,
   speed: 5
 };
 
-/* ========= ЗВЁЗДЫ ========= */
-const stars = [];
-for (let i = 0; i < 80; i++) {
-  stars.push({
-    x: Math.random() * canvas.width,
-    y: Math.random() * canvas.height * 0.5
-  });
-}
+/* ===== ЗВЁЗДЫ ===== */
+const stars = Array.from({length: 90}, () => ({
+  x: Math.random() * canvas.width,
+  y: Math.random() * canvas.height * 0.5,
+  a: Math.random()
+}));
 function drawStars() {
-  ctx.fillStyle = "white";
-  stars.forEach(s => ctx.fillRect(s.x, s.y, 2, 2));
+  stars.forEach(s => {
+    ctx.fillStyle = `rgba(255,255,255,${0.5 + s.a})`;
+    ctx.fillRect(s.x, s.y, 2, 2);
+  });
 }
 
-/* ========= САЛЮТ ========= */
-const fireworks = [];
-for (let i = 0; i < 6; i++) {
-  fireworks.push({
-    x: Math.random() * canvas.width,
-    y: Math.random() * canvas.height * 0.4,
-    r: 12 + Math.random() * 10,
-    c: ["red", "yellow", "cyan"][i % 3]
-  });
-}
+/* ===== ФЕЙЕРВЕРК ===== */
+const fireworks = Array.from({length: 5}, () => ({
+  x: Math.random() * canvas.width,
+  y: Math.random() * canvas.height * 0.4,
+  r: 18,
+  c: ["red","yellow","cyan","lime"][Math.floor(Math.random()*4)]
+}));
 function drawFireworks() {
   fireworks.forEach(f => {
     ctx.strokeStyle = f.c;
-    ctx.beginPath();
-    ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
-    ctx.stroke();
+    for (let i = 0; i < 8; i++) {
+      ctx.beginPath();
+      ctx.moveTo(f.x, f.y);
+      ctx.lineTo(
+        f.x + Math.cos(i * Math.PI / 4) * f.r,
+        f.y + Math.sin(i * Math.PI / 4) * f.r
+      );
+      ctx.stroke();
+    }
   });
 }
 
-/* ========= СНЕГ ========= */
+/* ===== СНЕГ ===== */
 let snow = [];
 function spawnSnow() {
   snow.push({
     x: Math.random() * canvas.width,
     y: -5,
-    v: 1 + Math.random() * 2
+    r: 1 + Math.random() * 2,
+    v: 0.5 + Math.random() * 1.5
   });
 }
 function updateSnow() {
@@ -108,11 +111,15 @@ function updateSnow() {
   snow = snow.filter(s => s.y < canvas.height);
 }
 function drawSnow() {
-  ctx.fillStyle = "white";
-  snow.forEach(s => ctx.fillRect(s.x, s.y, 2, 2));
+  snow.forEach(s => {
+    ctx.fillStyle = "rgba(255,255,255,0.8)";
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fill();
+  });
 }
 
-/* ========= МАНДАРИНЫ ========= */
+/* ===== МАНДАРИНЫ ===== */
 let mandarins = [];
 function spawnMandarin() {
   mandarins.push({
@@ -137,14 +144,69 @@ function updateMandarins() {
 }
 function drawMandarins() {
   mandarins.forEach(m => {
-    ctx.fillStyle = "orange";
-    ctx.fillRect(m.x - 6, m.y - 6, 12, 12);
-    ctx.fillStyle = "rgba(255,255,255,0.4)";
-    ctx.fillRect(m.x - 3, m.y - 4, 3, 3);
+    // тело
+    ctx.fillStyle = "#ff8c00";
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, 8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // дольки
+    ctx.strokeStyle = "#ffb347";
+    ctx.beginPath();
+    ctx.moveTo(m.x, m.y);
+    ctx.lineTo(m.x + 6, m.y);
+    ctx.stroke();
+
+    // блик
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    ctx.beginPath();
+    ctx.arc(m.x - 3, m.y - 3, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // листик
+    ctx.fillStyle = "green";
+    ctx.fillRect(m.x - 1, m.y - 10, 2, 4);
   });
 }
 
-/* ========= ПЕРСОНАЖ ========= */
+/* ===== ЁЛКИ (ЖИЗНИ) ===== */
+function drawLives() {
+  ctx.fillStyle = "white";
+  ctx.font = "14px Arial";
+  ctx.textAlign = "left";
+  ctx.fillText("Жизни", 12, 20);
+
+  for (let i = 0; i < lives; i++) {
+    let x = 14 + i * 28;
+    let y = 30;
+
+    // хвоя
+    ctx.fillStyle = "#0a7a2e";
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 12, y + 22);
+    ctx.lineTo(x - 12, y + 22);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(x, y + 10);
+    ctx.lineTo(x + 10, y + 30);
+    ctx.lineTo(x - 10, y + 30);
+    ctx.fill();
+
+    // ствол
+    ctx.fillStyle = "#5a3a1a";
+    ctx.fillRect(x - 2, y + 30, 4, 6);
+
+    // гирлянда
+    ["red","yellow","cyan"].forEach((c, j) => {
+      ctx.fillStyle = c;
+      ctx.fillRect(x - 6 + j * 6, y + 18, 2, 2);
+    });
+  }
+}
+
+/* ===== ПЕРСОНАЖ ===== */
 function drawPlayer() {
   const x = player.x;
   const y = player.y;
@@ -159,7 +221,7 @@ function drawPlayer() {
   ctx.fillRect(x + 4, y - 44, 2, 2);
   ctx.fillRect(x - 3, y - 36, 6, 2);
 
-  // шапка (ПОВЕРХ головы)
+  // шапка
   ctx.fillStyle = "#7a0000";
   ctx.fillRect(x - 14, y - 58, 28, 8);
   ctx.fillRect(x - 10, y - 68, 20, 10);
@@ -185,26 +247,17 @@ function drawPlayer() {
   ctx.fillRect(x + 2, y + 38, 12, 6);
 }
 
-/* ========= ЖИЗНИ ========= */
-function drawLives() {
-  for (let i = 0; i < lives; i++) {
-    ctx.fillStyle = "green";
-    ctx.fillRect(12 + i * 22, 12, 12, 12);
-    ctx.fillRect(14 + i * 22, 4, 8, 8);
-  }
-}
-
-/* ========= ТЕКСТ ========= */
-function drawMultilineText(lines, yStart) {
+/* ===== ТЕКСТ ===== */
+function drawText(lines, y) {
   ctx.fillStyle = "white";
   ctx.font = "16px Arial";
   ctx.textAlign = "center";
-  lines.forEach((line, i) => {
-    ctx.fillText(line, canvas.width / 2, yStart + i * 22);
+  lines.forEach((l, i) => {
+    ctx.fillText(l, canvas.width / 2, y + i * 22);
   });
 }
 
-/* ========= ЛОГИКА ========= */
+/* ===== ЛОГИКА ===== */
 function restart() {
   state = "play";
   score = 0;
@@ -242,8 +295,8 @@ function draw() {
   drawMandarins();
 
   if (state === "start") {
-    drawMultilineText([
-      "Твоя цель – собрать все мандарины.",
+    drawText([
+      "Твоя цель — собрать все мандарины.",
       "Управляй стрелками вверх, вниз, влево, вправо.",
       "",
       "Нажмите на экран, чтобы начать"
@@ -256,7 +309,7 @@ function draw() {
   }
 
   if (state === "gameover") {
-    drawMultilineText([
+    drawText([
       "Вы не смогли съесть все мандарины,",
       "угостите родных и друзей.",
       "",
