@@ -28,11 +28,12 @@ const ctx = canvas.getContext("2d");
 ctx.imageSmoothingEnabled = false;
 
 // ───── СОСТОЯНИЕ ─────
-let player, mandarins, lives, score, gameOver;
+let player, mandarins, snowflakes, lives, score, gameOver;
 
 function resetGame() {
-    player = { x: 160, y: 380, w: 28, h: 70, speed: 3 };
+    player = { x: 160, y: 360, w: 28, h: 70, speed: 3 };
     mandarins = [];
+    snowflakes = [];
     lives = 5;
     score = 0;
     gameOver = false;
@@ -53,6 +54,15 @@ function spawnMandarin() {
     });
 }
 
+function spawnSnow() {
+    snowflakes.push({
+        x: Math.random() * canvas.width,
+        y: -5,
+        speed: 0.5 + Math.random() * 0.8,
+        size: 1 + Math.random() * 2
+    });
+}
+
 // ───── ПЕРСОНАЖ ─────
 function drawPlayer() {
     const x = player.x;
@@ -68,179 +78,4 @@ function drawPlayer() {
 
     // глаза
     ctx.fillRect(x + 9, y - 18, 2, 2);
-    ctx.fillRect(x + 17, y - 18, 2, 2);
-
-    // нос
-    ctx.fillRect(x + 14, y - 16, 2, 4);
-
-    // усы
-    ctx.fillRect(x + 10, y - 13, 10, 2);
-
-    // рот
-    ctx.fillRect(x + 13, y - 10, 4, 1);
-
-    // шарф
-    ctx.fillStyle = "#b00020";
-    ctx.fillRect(x - 1, y - 6, 30, 6);
-    ctx.fillStyle = "#d32f2f";
-    for (let i = 0; i < 30; i += 4)
-        ctx.fillRect(x + i, y - 6, 2, 6);
-
-    // пальто
-    ctx.fillStyle = "#3a3a3a";
-    ctx.fillRect(x, y, 28, 40);
-
-    // карманы
-    ctx.fillStyle = "#2a2a2a";
-    ctx.fillRect(x + 3, y + 14, 8, 12);
-    ctx.fillRect(x + 17, y + 14, 8, 12);
-
-    // брюки
-    ctx.fillStyle = "#1c1c1c";
-    ctx.fillRect(x + 4, y + 40, 8, 18);
-    ctx.fillRect(x + 16, y + 40, 8, 18);
-
-    // ботинки
-    ctx.fillStyle = "#000";
-    ctx.fillRect(x + 2, y + 58, 10, 6);
-    ctx.fillRect(x + 16, y + 58, 10, 6);
-
-    // шнурки
-    ctx.fillStyle = "#888";
-    ctx.fillRect(x + 5, y + 60, 4, 1);
-    ctx.fillRect(x + 19, y + 60, 4, 1);
-}
-
-// ───── МАНДАРИН ─────
-function drawMandarin(m) {
-    const cx = m.x + 10;
-    const cy = m.y + 10;
-
-    // тень
-    ctx.fillStyle = "rgba(0,0,0,0.3)";
-    ctx.beginPath();
-    ctx.arc(cx, cy + 6, 8, 0, Math.PI * 2);
-    ctx.fill();
-
-    // плод
-    const grad = ctx.createRadialGradient(cx-3, cy-3, 2, cx, cy, 10);
-    grad.addColorStop(0, "#ffcc80");
-    grad.addColorStop(1, "#f57c00");
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(cx, cy, 9, 0, Math.PI * 2);
-    ctx.fill();
-
-    // точка
-    ctx.fillStyle = "#6d4c41";
-    ctx.fillRect(cx - 1, cy - 1, 2, 2);
-}
-
-// ───── ЖИЗНИ (ЁЛКИ) ─────
-function drawLives() {
-    for (let i = 0; i < lives; i++) {
-        const x = 280 + i * 14;
-        const y = 18;
-
-        ctx.fillStyle = "#0a5";
-        ctx.beginPath();
-        ctx.moveTo(x + 6, y);
-        ctx.lineTo(x, y + 14);
-        ctx.lineTo(x + 12, y + 14);
-        ctx.fill();
-
-        ctx.fillStyle = "yellow";
-        ctx.fillRect(x + 4, y + 9, 2, 2);
-        ctx.fillRect(x + 7, y + 11, 2, 2);
-
-        ctx.fillStyle = "gold";
-        ctx.fillRect(x + 5, y - 4, 2, 2);
-    }
-}
-
-// ───── ЛОГИКА ─────
-function update() {
-    if (gameOver) return;
-
-    if (keys["ArrowLeft"]) player.x -= player.speed;
-    if (keys["ArrowRight"]) player.x += player.speed;
-    if (keys["ArrowUp"]) player.y -= player.speed / 2;
-    if (keys["ArrowDown"]) player.y += player.speed / 2;
-
-    player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
-    player.y = Math.max(120, Math.min(canvas.height - player.h, player.y));
-
-    if (Math.random() < 0.03) spawnMandarin();
-
-    mandarins.forEach((m, i) => {
-        m.y += m.speed;
-
-        if (
-            m.x < player.x + player.w &&
-            m.x + 20 > player.x &&
-            m.y < player.y + player.h &&
-            m.y + 20 > player.y
-        ) {
-            mandarins.splice(i, 1);
-            score++;
-        } else if (m.y > canvas.height + 20) {
-            mandarins.splice(i, 1);
-            lives--;
-            if (lives <= 0) gameOver = true;
-        }
-    });
-}
-
-// ───── ОТРИСОВКА ─────
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    mandarins.forEach(drawMandarin);
-    drawPlayer();
-    drawLives();
-
-    ctx.fillStyle = "white";
-    ctx.textAlign = "left";
-    ctx.fillText("Мандарины: " + score, 10, 20);
-
-    if (gameOver) {
-        ctx.fillStyle = "rgba(0,0,0,0.7)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = "white";
-        ctx.textAlign = "center";
-        ctx.fillText(
-            "Вы не смогли съесть все новогодние салаты,",
-            canvas.width / 2, 230
-        );
-        ctx.fillText(
-            "придется отдать часть друзьям и родственникам",
-            canvas.width / 2, 250
-        );
-        ctx.fillText(
-            "Собрано: " + score,
-            canvas.width / 2, 280
-        );
-
-        ctx.fillStyle = "#0a5";
-        ctx.fillRect(canvas.width / 2 - 60, 310, 120, 34);
-        ctx.fillStyle = "white";
-        ctx.fillText("РЕСТАРТ", canvas.width / 2, 333);
-    }
-}
-
-// ───── РЕСТАРТ ─────
-canvas.addEventListener("click", () => {
-    if (gameOver) resetGame();
-});
-
-// ───── ЦИКЛ ─────
-function loop() {
-    update();
-    draw();
-    requestAnimationFrame(loop);
-}
-loop();
-</script>
-</body>
-</html>
+    ctx.fillRect(x + 17, y - 18,
