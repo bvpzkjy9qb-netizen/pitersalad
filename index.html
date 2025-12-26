@@ -3,18 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <title>Мандариновая зима</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <style>
 html, body {
   margin: 0;
   padding: 0;
-  background: #1b2f6a;
+  background: #0f1f4d;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   font-family: Arial, sans-serif;
 }
 canvas {
-  display: block;
-  margin: 0 auto;
+  background: #1b2f6a;
 }
 </style>
 </head>
@@ -26,8 +30,22 @@ canvas {
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+/* ---------- ВЕРТИКАЛЬНЫЙ РАЗМЕР ---------- */
+function resize() {
+  const ratio = 9 / 16;
+  let h = window.innerHeight;
+  let w = h * ratio;
+
+  if (w > window.innerWidth) {
+    w = window.innerWidth;
+    h = w / ratio;
+  }
+
+  canvas.width = w;
+  canvas.height = h;
+}
+window.addEventListener("resize", resize);
+resize();
 
 /* ---------- СОСТОЯНИЕ ---------- */
 let state = "start";
@@ -45,9 +63,7 @@ canvas.addEventListener("click", () => {
 /* ---------- ПЕРСОНАЖ ---------- */
 const player = {
   x: canvas.width / 2,
-  y: canvas.height - 180,
-  w: 80,
-  h: 150,
+  y: canvas.height - 220,
   speed: 6
 };
 
@@ -76,34 +92,30 @@ function drawSnow() {
 
 /* ---------- МАНДАРИНЫ ---------- */
 let mandarins = [];
-
 function spawnMandarin() {
   mandarins.push({
     x: Math.random() * canvas.width,
     y: canvas.height + 20,
-    r: 12,
+    r: 14,
     v: 2 + Math.random() * 2
   });
 }
-
 function updateMandarins() {
   mandarins.forEach(m => m.y -= m.v);
-
   mandarins = mandarins.filter(m => {
     if (m.y < -20) {
       lives--;
       return false;
     }
     const dx = m.x - player.x;
-    const dy = m.y - (player.y - 30);
-    if (Math.hypot(dx, dy) < 35) {
+    const dy = m.y - (player.y - 40);
+    if (Math.hypot(dx, dy) < 40) {
       score++;
       return false;
     }
     return true;
   });
 }
-
 function drawMandarins() {
   mandarins.forEach(m => {
     ctx.fillStyle = "orange";
@@ -113,84 +125,78 @@ function drawMandarins() {
 
     ctx.fillStyle = "rgba(255,255,255,0.4)";
     ctx.beginPath();
-    ctx.arc(m.x - 4, m.y - 4, 3, 0, Math.PI * 2);
+    ctx.arc(m.x - 5, m.y - 5, 4, 0, Math.PI * 2);
     ctx.fill();
   });
 }
 
 /* ---------- ПЕРСОНАЖ ---------- */
 function drawPlayer() {
-  const p = player;
+  const x = player.x;
+  const y = player.y;
 
   // шапка
   ctx.fillStyle = "#8b0000";
   ctx.beginPath();
-  ctx.arc(p.x, p.y - 95, 26, Math.PI, 0);
+  ctx.arc(x, y - 110, 30, Math.PI, 0);
   ctx.fill();
 
-  // помпон
   ctx.fillStyle = "white";
   ctx.beginPath();
-  ctx.arc(p.x + 26, p.y - 96, 6, 0, Math.PI * 2);
+  ctx.arc(x + 30, y - 112, 7, 0, Math.PI * 2);
   ctx.fill();
 
   // голова
   ctx.fillStyle = "#f1c27d";
   ctx.beginPath();
-  ctx.arc(p.x, p.y - 80, 24, 0, Math.PI * 2);
+  ctx.arc(x, y - 90, 26, 0, Math.PI * 2);
   ctx.fill();
 
   // глаза
   ctx.fillStyle = "#000";
-  ctx.fillRect(p.x - 8, p.y - 85, 4, 4);
-  ctx.fillRect(p.x + 4, p.y - 85, 4, 4);
+  ctx.fillRect(x - 8, y - 96, 4, 4);
+  ctx.fillRect(x + 4, y - 96, 4, 4);
 
   // нос
-  ctx.fillRect(p.x - 1, p.y - 80, 2, 6);
+  ctx.fillRect(x - 1, y - 90, 2, 7);
 
   // улыбка
-  ctx.beginPath();
   ctx.strokeStyle = "#000";
-  ctx.arc(p.x, p.y - 72, 6, 0, Math.PI);
+  ctx.beginPath();
+  ctx.arc(x, y - 82, 7, 0, Math.PI);
   ctx.stroke();
 
   // шарф
   ctx.fillStyle = "#cc0000";
-  ctx.fillRect(p.x - 26, p.y - 56, 52, 10);
+  ctx.fillRect(x - 30, y - 60, 60, 12);
 
   // пальто
   ctx.fillStyle = "#3b3f4f";
-  ctx.fillRect(p.x - 30, p.y - 45, 60, 95);
+  ctx.fillRect(x - 34, y - 48, 68, 110);
 
   // пуговицы
   ctx.fillStyle = "#222";
   for (let i = 0; i < 4; i++) {
     ctx.beginPath();
-    ctx.arc(p.x, p.y - 28 + i * 18, 3, 0, Math.PI * 2);
+    ctx.arc(x, y - 30 + i * 20, 3, 0, Math.PI * 2);
     ctx.fill();
   }
 
   // ноги
   ctx.fillStyle = "#2b4a7f";
-  ctx.fillRect(p.x - 20, p.y + 50, 18, 45);
-  ctx.fillRect(p.x + 2, p.y + 50, 18, 45);
+  ctx.fillRect(x - 22, y + 62, 20, 55);
+  ctx.fillRect(x + 2, y + 62, 20, 55);
 
   // ботинки
   ctx.fillStyle = "#1a1a1a";
-  ctx.fillRect(p.x - 22, p.y + 95, 22, 10);
-  ctx.fillRect(p.x + 2, p.y + 95, 22, 10);
+  ctx.fillRect(x - 24, y + 117, 24, 12);
+  ctx.fillRect(x + 2, y + 117, 24, 12);
 }
 
 /* ---------- UI ---------- */
-function drawLives() {
-  ctx.fillStyle = "white";
-  ctx.font = "20px Arial";
-  ctx.fillText("Жизни: " + lives, 20, 30);
-}
-
 function drawStart() {
   ctx.fillStyle = "white";
-  ctx.font = "24px Arial";
+  ctx.font = "22px Arial";
   ctx.textAlign = "center";
   ctx.fillText(
     "Ваша цель — поймать все мандарины.\nУправляйте петербуржцем стрелками ↑ ↓ ← →.\n\nНажмите на экран, чтобы начать",
@@ -201,13 +207,19 @@ function drawStart() {
 
 function drawGameOver() {
   ctx.fillStyle = "white";
-  ctx.font = "26px Arial";
+  ctx.font = "24px Arial";
   ctx.textAlign = "center";
   ctx.fillText(
     "Вы не смогли съесть все мандарины,\nотдайте часть родственникам и друзьям.\n\nСобрано: " + score + "\n\nНажмите, чтобы начать заново",
     canvas.width / 2,
     canvas.height / 2
   );
+}
+
+function drawLives() {
+  ctx.fillStyle = "white";
+  ctx.font = "18px Arial";
+  ctx.fillText("Жизни: " + lives, 16, 26);
 }
 
 /* ---------- ЛОГИКА ---------- */
@@ -230,17 +242,16 @@ function update() {
   if (keys["ArrowDown"]) player.y += player.speed;
 
   player.x = Math.max(40, Math.min(canvas.width - 40, player.x));
-  player.y = Math.max(140, Math.min(canvas.height - 110, player.y));
+  player.y = Math.max(160, Math.min(canvas.height - 140, player.y));
 
-  if (Math.random() < 0.03) spawnMandarin();
+  if (Math.random() < 0.035) spawnMandarin();
   updateMandarins();
 
   if (lives <= 0) state = "gameover";
 }
 
 function draw() {
-  ctx.fillStyle = "#1b2f6a";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   drawSnow();
   drawMandarins();
