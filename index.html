@@ -2,83 +2,69 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Новогодние салаты</title>
+<title>Зимние мандарины</title>
 <style>
-    body {
-        margin: 0;
-        background: black;
-        overflow: hidden;
-        touch-action: none;
-        font-family: monospace;
-    }
-    canvas {
-        display: block;
-        margin: 0 auto;
-        background: linear-gradient(#001122, #002244);
-        image-rendering: pixelated;
-    }
+body {
+    margin: 0;
+    background: #000814;
+    overflow: hidden;
+    font-family: monospace;
+}
+canvas {
+    display: block;
+    margin: 0 auto;
+    background: linear-gradient(#001d3d, #003566);
+    image-rendering: pixelated;
+}
 </style>
 </head>
 <body>
 
 <canvas id="game" width="360" height="520"></canvas>
-<audio id="music" src="music.mp3" loop></audio>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 ctx.imageSmoothingEnabled = false;
 
-const music = document.getElementById("music");
-music.volume = 0.4;
-document.body.addEventListener("click", () => music.play(), { once: true });
-
-// ───── Состояние игры ─────
-let player, salads, snowflakes, lives, score, gameOver;
+// ───── СОСТОЯНИЕ ─────
+let player, mandarins, lives, score, gameOver;
 
 function resetGame() {
     player = { x: 160, y: 380, w: 28, h: 70, speed: 3 };
-    salads = [];
-    snowflakes = [];
+    mandarins = [];
     lives = 5;
     score = 0;
     gameOver = false;
 }
 resetGame();
 
-// ───── Управление ─────
+// ───── УПРАВЛЕНИЕ ─────
 let keys = {};
 document.addEventListener("keydown", e => keys[e.key] = true);
 document.addEventListener("keyup", e => keys[e.key] = false);
 
-// ───── Спавн ─────
-function spawnSalad() {
-    salads.push({
-        x: Math.random() * (canvas.width - 40),
-        y: canvas.height + 40,
+// ───── СПАВН ─────
+function spawnMandarin() {
+    mandarins.push({
+        x: Math.random() * (canvas.width - 20),
+        y: -20,
         speed: 1.5 + Math.random()
     });
 }
-function spawnSnow() {
-    snowflakes.push({
-        x: Math.random() * canvas.width,
-        y: -5,
-        speed: 0.5 + Math.random()
-    });
-}
 
-// ───── Персонаж ─────
+// ───── ПЕРСОНАЖ ─────
 function drawPlayer() {
     const x = player.x;
     const y = player.y;
 
     // голова
-    ctx.fillStyle = "#ffe0bd";
+    ctx.fillStyle = "#f1c27d";
     ctx.fillRect(x + 6, y - 26, 16, 16);
 
     // волосы
-    ctx.fillStyle = "black";
-    ctx.fillRect(x + 6, y - 26, 16, 6);
+    ctx.fillStyle = "#222";
+    ctx.fillRect(x + 6, y - 26, 16, 5);
 
     // глаза
     ctx.fillRect(x + 9, y - 18, 2, 2);
@@ -88,83 +74,74 @@ function drawPlayer() {
     ctx.fillRect(x + 14, y - 16, 2, 4);
 
     // усы
-    ctx.fillRect(x + 10, y - 12, 10, 2);
+    ctx.fillRect(x + 10, y - 13, 10, 2);
 
     // рот
-    ctx.fillRect(x + 13, y - 9, 4, 1);
+    ctx.fillRect(x + 13, y - 10, 4, 1);
 
-    // шарф (шерстяной)
-    ctx.fillStyle = "#aa0000";
-    ctx.fillRect(x, y - 6, 28, 6);
-    ctx.fillStyle = "#dd4444";
-    for (let i = 0; i < 28; i += 4)
+    // шарф
+    ctx.fillStyle = "#b00020";
+    ctx.fillRect(x - 1, y - 6, 30, 6);
+    ctx.fillStyle = "#d32f2f";
+    for (let i = 0; i < 30; i += 4)
         ctx.fillRect(x + i, y - 6, 2, 6);
 
     // пальто
-    ctx.fillStyle = "#444";
-    ctx.fillRect(x, y, 28, 38);
+    ctx.fillStyle = "#3a3a3a";
+    ctx.fillRect(x, y, 28, 40);
 
     // карманы
-    ctx.fillStyle = "#333";
-    ctx.fillRect(x + 3, y + 12, 8, 12);
-    ctx.fillRect(x + 17, y + 12, 8, 12);
+    ctx.fillStyle = "#2a2a2a";
+    ctx.fillRect(x + 3, y + 14, 8, 12);
+    ctx.fillRect(x + 17, y + 14, 8, 12);
 
     // брюки
-    ctx.fillStyle = "#222";
-    ctx.fillRect(x + 4, y + 38, 8, 18);
-    ctx.fillRect(x + 16, y + 38, 8, 18);
+    ctx.fillStyle = "#1c1c1c";
+    ctx.fillRect(x + 4, y + 40, 8, 18);
+    ctx.fillRect(x + 16, y + 40, 8, 18);
 
     // ботинки
-    ctx.fillStyle = "black";
-    ctx.fillRect(x + 2, y + 56, 10, 6);
-    ctx.fillRect(x + 16, y + 56, 10, 6);
+    ctx.fillStyle = "#000";
+    ctx.fillRect(x + 2, y + 58, 10, 6);
+    ctx.fillRect(x + 16, y + 58, 10, 6);
 
     // шнурки
     ctx.fillStyle = "#888";
-    ctx.fillRect(x + 5, y + 58, 4, 1);
-    ctx.fillRect(x + 19, y + 58, 4, 1);
+    ctx.fillRect(x + 5, y + 60, 4, 1);
+    ctx.fillRect(x + 19, y + 60, 4, 1);
 }
 
-// ───── Салат (полукруглая тарелка, БЕЗ ellipse) ─────
-function drawSalad(s) {
-    const cx = s.x + 20;
-    const cy = s.y + 20;
+// ───── МАНДАРИН ─────
+function drawMandarin(m) {
+    const cx = m.x + 10;
+    const cy = m.y + 10;
 
-    // тень (круг)
+    // тень
     ctx.fillStyle = "rgba(0,0,0,0.3)";
     ctx.beginPath();
-    ctx.arc(cx, cy + 18, 16, 0, Math.PI * 2);
+    ctx.arc(cx, cy + 6, 8, 0, Math.PI * 2);
     ctx.fill();
 
-    // тарелка (полукруг)
-    ctx.fillStyle = "#ddd";
+    // плод
+    const grad = ctx.createRadialGradient(cx-3, cy-3, 2, cx, cy, 10);
+    grad.addColorStop(0, "#ffcc80");
+    grad.addColorStop(1, "#f57c00");
+    ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.arc(cx, cy + 6, 18, Math.PI, 0);
-    ctx.fill();
-    ctx.strokeStyle = "#aaa";
-    ctx.stroke();
-
-    // салат
-    ctx.fillStyle = "#cfcfa0";
-    ctx.beginPath();
-    ctx.arc(cx, cy, 14, Math.PI, 0);
+    ctx.arc(cx, cy, 9, 0, Math.PI * 2);
     ctx.fill();
 
-    // ингредиенты
-    const ing = ["#d9b382", "#7cb342", "#ff8f00", "#fffde7"];
-    for (let i = 0; i < 12; i++) {
-        ctx.fillStyle = ing[Math.floor(Math.random() * ing.length)];
-        ctx.fillRect(cx - 10 + Math.random() * 20, cy - 10 + Math.random() * 8, 2, 2);
-    }
+    // точка
+    ctx.fillStyle = "#6d4c41";
+    ctx.fillRect(cx - 1, cy - 1, 2, 2);
 }
 
-// ───── Ёлки жизни ─────
+// ───── ЖИЗНИ (ЁЛКИ) ─────
 function drawLives() {
     for (let i = 0; i < lives; i++) {
         const x = 280 + i * 14;
         const y = 18;
 
-        // крона
         ctx.fillStyle = "#0a5";
         ctx.beginPath();
         ctx.moveTo(x + 6, y);
@@ -172,18 +149,16 @@ function drawLives() {
         ctx.lineTo(x + 12, y + 14);
         ctx.fill();
 
-        // гирлянда
         ctx.fillStyle = "yellow";
-        ctx.fillRect(x + 3, y + 8, 2, 2);
-        ctx.fillRect(x + 7, y + 10, 2, 2);
+        ctx.fillRect(x + 4, y + 9, 2, 2);
+        ctx.fillRect(x + 7, y + 11, 2, 2);
 
-        // звезда
         ctx.fillStyle = "gold";
         ctx.fillRect(x + 5, y - 4, 2, 2);
     }
 }
 
-// ───── Обновление ─────
+// ───── ЛОГИКА ─────
 function update() {
     if (gameOver) return;
 
@@ -195,49 +170,38 @@ function update() {
     player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
     player.y = Math.max(120, Math.min(canvas.height - player.h, player.y));
 
-    if (Math.random() < 0.02) spawnSalad();
-    if (Math.random() < 0.15) spawnSnow();
+    if (Math.random() < 0.03) spawnMandarin();
 
-    salads.forEach((s, i) => {
-        s.y -= s.speed;
+    mandarins.forEach((m, i) => {
+        m.y += m.speed;
+
         if (
-            s.x < player.x + player.w &&
-            s.x + 40 > player.x &&
-            s.y < player.y + player.h &&
-            s.y + 30 > player.y
+            m.x < player.x + player.w &&
+            m.x + 20 > player.x &&
+            m.y < player.y + player.h &&
+            m.y + 20 > player.y
         ) {
-            salads.splice(i, 1);
+            mandarins.splice(i, 1);
             score++;
-        } else if (s.y < -60) {
-            salads.splice(i, 1);
+        } else if (m.y > canvas.height + 20) {
+            mandarins.splice(i, 1);
             lives--;
             if (lives <= 0) gameOver = true;
         }
     });
-
-    snowflakes.forEach((f, i) => {
-        f.y += f.speed;
-        if (f.y > canvas.height) snowflakes.splice(i, 1);
-    });
 }
 
-// ───── Отрисовка ─────
+// ───── ОТРИСОВКА ─────
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // снег
-    snowflakes.forEach(f => {
-        ctx.fillStyle = "white";
-        ctx.fillRect(f.x, f.y, 2, 2);
-    });
-
-    salads.forEach(drawSalad);
+    mandarins.forEach(drawMandarin);
     drawPlayer();
     drawLives();
 
     ctx.fillStyle = "white";
     ctx.textAlign = "left";
-    ctx.fillText("Салаты: " + score, 10, 20);
+    ctx.fillText("Мандарины: " + score, 10, 20);
 
     if (gameOver) {
         ctx.fillStyle = "rgba(0,0,0,0.7)";
@@ -254,11 +218,10 @@ function draw() {
             canvas.width / 2, 250
         );
         ctx.fillText(
-            "Собрано салатов: " + score,
+            "Собрано: " + score,
             canvas.width / 2, 280
         );
 
-        // кнопка рестарт
         ctx.fillStyle = "#0a5";
         ctx.fillRect(canvas.width / 2 - 60, 310, 120, 34);
         ctx.fillStyle = "white";
@@ -266,12 +229,12 @@ function draw() {
     }
 }
 
-// ───── Клик рестарта ─────
+// ───── РЕСТАРТ ─────
 canvas.addEventListener("click", () => {
     if (gameOver) resetGame();
 });
 
-// ───── Цикл ─────
+// ───── ЦИКЛ ─────
 function loop() {
     update();
     draw();
