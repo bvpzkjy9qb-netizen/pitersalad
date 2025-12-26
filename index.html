@@ -2,16 +2,20 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Новогодняя ночь</title>
+<title>Мандариновая зима</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-html,body{
-  margin:0;
-  padding:0;
-  background:#1a2f6b;
-  overflow:hidden;
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #1b2f6a;
+  overflow: hidden;
+  font-family: Arial, sans-serif;
 }
-canvas{display:block;margin:0 auto;}
+canvas {
+  display: block;
+  margin: 0 auto;
+}
 </style>
 </head>
 <body>
@@ -25,196 +29,231 @@ const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-let state="play";
-let lives=5;
-let score=0;
-let snow=[];
-let mandarins=[];
-const keys={};
+/* ---------- СОСТОЯНИЕ ---------- */
+let state = "start";
+let score = 0;
+let lives = 5;
 
-window.addEventListener("keydown",e=>keys[e.key]=true);
-window.addEventListener("keyup",e=>keys[e.key]=false);
+const keys = {};
+window.addEventListener("keydown", e => keys[e.key] = true);
+window.addEventListener("keyup", e => keys[e.key] = false);
 
-const player={
-  x:canvas.width/2,
-  y:canvas.height-150,
-  w:70,
-  h:140,
-  speed:5
+canvas.addEventListener("click", () => {
+  if (state === "start" || state === "gameover") restart();
+});
+
+/* ---------- ПЕРСОНАЖ ---------- */
+const player = {
+  x: canvas.width / 2,
+  y: canvas.height - 180,
+  w: 80,
+  h: 150,
+  speed: 6
 };
 
 /* ---------- СНЕГ ---------- */
-function spawnSnow(){
+let snow = [];
+function spawnSnow() {
   snow.push({
-    x:Math.random()*canvas.width,
-    y:-10,
-    r:1+Math.random()*2,
-    v:1+Math.random()*2
+    x: Math.random() * canvas.width,
+    y: -10,
+    r: 1 + Math.random() * 2,
+    v: 1 + Math.random() * 2
   });
 }
-function drawSnow(){
-  ctx.fillStyle="white";
-  snow.forEach(s=>{
+function updateSnow() {
+  snow.forEach(s => s.y += s.v);
+  snow = snow.filter(s => s.y < canvas.height + 10);
+}
+function drawSnow() {
+  ctx.fillStyle = "white";
+  snow.forEach(s => {
     ctx.beginPath();
-    ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
     ctx.fill();
   });
 }
-function updateSnow(){
-  snow.forEach(s=>s.y+=s.v);
-  snow=snow.filter(s=>s.y<canvas.height+10);
+
+/* ---------- МАНДАРИНЫ ---------- */
+let mandarins = [];
+
+function spawnMandarin() {
+  mandarins.push({
+    x: Math.random() * canvas.width,
+    y: canvas.height + 20,
+    r: 12,
+    v: 2 + Math.random() * 2
+  });
 }
 
-/* ---------- ЁЛКА ---------- */
-function drawTree(){
-  const baseY=canvas.height-80;
-  const cx=canvas.width/2;
+function updateMandarins() {
+  mandarins.forEach(m => m.y -= m.v);
 
-  // ствол
-  ctx.fillStyle="#5b3a1e";
-  ctx.fillRect(cx-12,baseY,24,40);
+  mandarins = mandarins.filter(m => {
+    if (m.y < -20) {
+      lives--;
+      return false;
+    }
+    const dx = m.x - player.x;
+    const dy = m.y - (player.y - 30);
+    if (Math.hypot(dx, dy) < 35) {
+      score++;
+      return false;
+    }
+    return true;
+  });
+}
 
-  // ярусы
-  for(let i=0;i<4;i++){
-    ctx.fillStyle="#0b5d2a";
+function drawMandarins() {
+  mandarins.forEach(m => {
+    ctx.fillStyle = "orange";
     ctx.beginPath();
-    ctx.moveTo(cx,baseY-40-i*40);
-    ctx.lineTo(cx-120+i*20,baseY+20-i*40);
-    ctx.lineTo(cx+120-i*20,baseY+20-i*40);
+    ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
     ctx.fill();
-  }
 
-  // гирлянда
-  for(let i=0;i<12;i++){
-    ctx.fillStyle=["red","yellow","cyan","pink"][i%4];
-    ctx.shadowColor=ctx.fillStyle;
-    ctx.shadowBlur=10;
+    ctx.fillStyle = "rgba(255,255,255,0.4)";
     ctx.beginPath();
-    ctx.arc(cx-80+i*14,baseY-60+i*2,4,0,Math.PI*2);
+    ctx.arc(m.x - 4, m.y - 4, 3, 0, Math.PI * 2);
     ctx.fill();
-    ctx.shadowBlur=0;
-  }
-
-  // флажки
-  for(let i=0;i<6;i++){
-    ctx.fillStyle=["#ff4444","#44ff44","#4444ff"][i%3];
-    ctx.beginPath();
-    ctx.moveTo(cx-60+i*20,baseY-100);
-    ctx.lineTo(cx-50+i*20,baseY-85);
-    ctx.lineTo(cx-70+i*20,baseY-85);
-    ctx.fill();
-  }
-
-  // снеговик
-  ctx.fillStyle="white";
-  ctx.beginPath();ctx.arc(cx+70,baseY-10,10,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.arc(cx+70,baseY-25,7,0,Math.PI*2);ctx.fill();
-
-  // щелкунчик (упрощённый)
-  ctx.fillStyle="red";
-  ctx.fillRect(cx-90,baseY-30,10,25);
-  ctx.fillStyle="#f1c27d";
-  ctx.fillRect(cx-90,baseY-45,10,15);
-
-  // звезда
-  ctx.fillStyle="yellow";
-  ctx.shadowColor="yellow";
-  ctx.shadowBlur=20;
-  ctx.beginPath();
-  ctx.moveTo(cx,baseY-190);
-  ctx.lineTo(cx+8,baseY-170);
-  ctx.lineTo(cx-8,baseY-170);
-  ctx.fill();
-  ctx.shadowBlur=0;
+  });
 }
 
 /* ---------- ПЕРСОНАЖ ---------- */
-function drawPlayer(){
-  const p=player;
+function drawPlayer() {
+  const p = player;
 
   // шапка
-  ctx.fillStyle="#8b0000";
+  ctx.fillStyle = "#8b0000";
   ctx.beginPath();
-  ctx.arc(p.x,p.y-90,24,Math.PI,0);
+  ctx.arc(p.x, p.y - 95, 26, Math.PI, 0);
   ctx.fill();
 
   // помпон
-  ctx.fillStyle="white";
+  ctx.fillStyle = "white";
   ctx.beginPath();
-  ctx.arc(p.x+22,p.y-92,6,0,Math.PI*2);
+  ctx.arc(p.x + 26, p.y - 96, 6, 0, Math.PI * 2);
   ctx.fill();
 
   // голова
-  ctx.fillStyle="#f1c27d";
+  ctx.fillStyle = "#f1c27d";
   ctx.beginPath();
-  ctx.arc(p.x,p.y-80,22,0,Math.PI*2);
+  ctx.arc(p.x, p.y - 80, 24, 0, Math.PI * 2);
   ctx.fill();
 
   // глаза
-  ctx.fillStyle="#000";
-  ctx.fillRect(p.x-8,p.y-85,4,4);
-  ctx.fillRect(p.x+4,p.y-85,4,4);
+  ctx.fillStyle = "#000";
+  ctx.fillRect(p.x - 8, p.y - 85, 4, 4);
+  ctx.fillRect(p.x + 4, p.y - 85, 4, 4);
 
   // нос
-  ctx.fillRect(p.x-1,p.y-80,2,6);
+  ctx.fillRect(p.x - 1, p.y - 80, 2, 6);
 
   // улыбка
-  ctx.strokeStyle="#000";
   ctx.beginPath();
-  ctx.arc(p.x,p.y-72,6,0,Math.PI);
+  ctx.strokeStyle = "#000";
+  ctx.arc(p.x, p.y - 72, 6, 0, Math.PI);
   ctx.stroke();
 
   // шарф
-  ctx.fillStyle="#cc0000";
-  ctx.fillRect(p.x-24,p.y-55,48,10);
+  ctx.fillStyle = "#cc0000";
+  ctx.fillRect(p.x - 26, p.y - 56, 52, 10);
 
   // пальто
-  ctx.fillStyle="#3b3f4f";
-  ctx.fillRect(p.x-28,p.y-45,56,90);
+  ctx.fillStyle = "#3b3f4f";
+  ctx.fillRect(p.x - 30, p.y - 45, 60, 95);
 
   // пуговицы
-  ctx.fillStyle="#222";
-  for(let i=0;i<4;i++){
+  ctx.fillStyle = "#222";
+  for (let i = 0; i < 4; i++) {
     ctx.beginPath();
-    ctx.arc(p.x,p.y-30+i*18,3,0,Math.PI*2);
+    ctx.arc(p.x, p.y - 28 + i * 18, 3, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // джинсы
-  ctx.fillStyle="#2b4a7f";
-  ctx.fillRect(p.x-20,p.y+45,18,45);
-  ctx.fillRect(p.x+2,p.y+45,18,45);
+  // ноги
+  ctx.fillStyle = "#2b4a7f";
+  ctx.fillRect(p.x - 20, p.y + 50, 18, 45);
+  ctx.fillRect(p.x + 2, p.y + 50, 18, 45);
 
   // ботинки
-  ctx.fillStyle="#1a1a1a";
-  ctx.fillRect(p.x-22,p.y+90,22,10);
-  ctx.fillRect(p.x+2,p.y+90,22,10);
+  ctx.fillStyle = "#1a1a1a";
+  ctx.fillRect(p.x - 22, p.y + 95, 22, 10);
+  ctx.fillRect(p.x + 2, p.y + 95, 22, 10);
 }
 
-/* ---------- ИГРОВАЯ ЛОГИКА ---------- */
-function update(){
-  if(Math.random()<0.3) spawnSnow();
+/* ---------- UI ---------- */
+function drawLives() {
+  ctx.fillStyle = "white";
+  ctx.font = "20px Arial";
+  ctx.fillText("Жизни: " + lives, 20, 30);
+}
+
+function drawStart() {
+  ctx.fillStyle = "white";
+  ctx.font = "24px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText(
+    "Ваша цель — поймать все мандарины.\nУправляйте петербуржцем стрелками ↑ ↓ ← →.\n\nНажмите на экран, чтобы начать",
+    canvas.width / 2,
+    canvas.height / 2
+  );
+}
+
+function drawGameOver() {
+  ctx.fillStyle = "white";
+  ctx.font = "26px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText(
+    "Вы не смогли съесть все мандарины,\nотдайте часть родственникам и друзьям.\n\nСобрано: " + score + "\n\nНажмите, чтобы начать заново",
+    canvas.width / 2,
+    canvas.height / 2
+  );
+}
+
+/* ---------- ЛОГИКА ---------- */
+function restart() {
+  state = "play";
+  score = 0;
+  lives = 5;
+  mandarins = [];
+}
+
+function update() {
+  if (Math.random() < 0.4) spawnSnow();
   updateSnow();
 
-  if(keys["ArrowLeft"])player.x-=player.speed;
-  if(keys["ArrowRight"])player.x+=player.speed;
-  if(keys["ArrowUp"])player.y-=player.speed;
-  if(keys["ArrowDown"])player.y+=player.speed;
+  if (state !== "play") return;
 
-  player.x=Math.max(40,Math.min(canvas.width-40,player.x));
-  player.y=Math.max(120,Math.min(canvas.height-80,player.y));
+  if (keys["ArrowLeft"]) player.x -= player.speed;
+  if (keys["ArrowRight"]) player.x += player.speed;
+  if (keys["ArrowUp"]) player.y -= player.speed;
+  if (keys["ArrowDown"]) player.y += player.speed;
+
+  player.x = Math.max(40, Math.min(canvas.width - 40, player.x));
+  player.y = Math.max(140, Math.min(canvas.height - 110, player.y));
+
+  if (Math.random() < 0.03) spawnMandarin();
+  updateMandarins();
+
+  if (lives <= 0) state = "gameover";
 }
 
-function draw(){
-  ctx.fillStyle="#1a2f6b";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+function draw() {
+  ctx.fillStyle = "#1b2f6a";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   drawSnow();
-  drawTree();
-  drawPlayer();
+  drawMandarins();
+
+  if (state === "start") drawStart();
+  if (state === "play") {
+    drawPlayer();
+    drawLives();
+  }
+  if (state === "gameover") drawGameOver();
 }
 
-function loop(){
+function loop() {
   update();
   draw();
   requestAnimationFrame(loop);
