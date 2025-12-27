@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Мандарины</title>
 <style>
   body {
@@ -13,7 +13,6 @@
     align-items: center;
     font-family: Arial, sans-serif;
     color: white;
-    touch-action: none;
   }
   canvas {
     background: linear-gradient(#003366, #001a3a);
@@ -30,97 +29,34 @@ const ctx = canvas.getContext("2d");
 
 /* ---------- СОСТОЯНИЯ ---------- */
 let gameState = "start";
-let score = 0;
-let lives = 5;
-let time = 0;
-let imageLoaded = false;
 
-/* ---------- ИЗОБРАЖЕНИЕ ПЕРСОНАЖА ---------- */
+/* ---------- ПЕРСОНАЖ (PNG С ПРОЗРАЧНЫМ ФОНОМ) ---------- */
 const playerImage = new Image();
-playerImage.src = "character.png";
+playerImage.src =
+"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAACgCAYAAABU..."; // ← персонаж без фона
 
-playerImage.onload = () => {
-  imageLoaded = true;
-  requestAnimationFrame(loop);
-};
-
-playerImage.onerror = () => {
-  console.error("Не удалось загрузить изображение персонажа");
-};
+let imageReady = false;
+playerImage.onload = () => imageReady = true;
 
 /* ---------- ПЕРСОНАЖ ---------- */
 const player = {
   x: canvas.width / 2,
-  y: canvas.height - 40,
+  y: canvas.height - 30,
   width: 96,
   height: 160,
-  speed: 10
+  speed: 8
 };
-
-/* ---------- МАНДАРИНЫ ---------- */
-let mandarins = [];
-let mandarinSpeed = 1.2;
-let spawnDelay = 120;
 
 /* ---------- УПРАВЛЕНИЕ ---------- */
 const keys = {};
 document.addEventListener("keydown", e => keys[e.key] = true);
 document.addEventListener("keyup", e => keys[e.key] = false);
 
-canvas.addEventListener("click", () => {
-  if (gameState !== "play") startGame();
-});
-
-function startGame() {
-  score = 0;
-  lives = 5;
-  mandarins = [];
-  time = 0;
-  mandarinSpeed = 1.2;
-  spawnDelay = 120;
-  gameState = "play";
-}
-
-/* ---------- ЛОГИКА ---------- */
-function spawnMandarin() {
-  mandarins.push({
-    x: Math.random() * (canvas.width - 40) + 20,
-    y: -30,
-    r: 16
-  });
-}
-
-function updateMandarins() {
-  mandarins.forEach(m => {
-    m.y += mandarinSpeed;
-
-    if (
-      m.x > player.x - player.width / 2 &&
-      m.x < player.x + player.width / 2 &&
-      m.y > player.y - player.height &&
-      m.y < player.y
-    ) {
-      score++;
-      m.caught = true;
-    }
-
-    if (m.y > canvas.height + 20) {
-      lives--;
-      m.missed = true;
-      if (lives <= 0) gameState = "gameover";
-    }
-  });
-
-  mandarins = mandarins.filter(m => !m.caught && !m.missed);
-}
+canvas.addEventListener("click", () => gameState = "play");
 
 /* ---------- ОБНОВЛЕНИЕ ---------- */
 function update() {
   if (gameState !== "play") return;
-
-  time++;
-
-  if (time % spawnDelay === 0) spawnMandarin();
 
   if (keys["ArrowLeft"]) player.x -= player.speed;
   if (keys["ArrowRight"]) player.x += player.speed;
@@ -129,40 +65,22 @@ function update() {
     player.width / 2,
     Math.min(canvas.width - player.width / 2, player.x)
   );
-
-  updateMandarins();
 }
 
 /* ---------- РИСОВАНИЕ ---------- */
-function drawMandarin(m) {
-  ctx.fillStyle = "#ff8c00";
-  ctx.beginPath();
-  ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
-  ctx.fill();
-}
-
 function drawPlayer() {
-  if (imageLoaded) {
-    ctx.drawImage(
-      playerImage,
-      player.x - player.width / 2,
-      player.y - player.height,
-      player.width,
-      player.height
-    );
-  } else {
-    /* Заглушка, если картинка не загрузилась */
-    ctx.fillStyle = "red";
-    ctx.fillRect(
-      player.x - player.width / 2,
-      player.y - player.height,
-      player.width,
-      player.height
-    );
-  }
+  if (!imageReady) return;
+
+  ctx.drawImage(
+    playerImage,
+    player.x - player.width / 2,
+    player.y - player.height,
+    player.width,
+    player.height
+  );
 }
 
-function drawTextCenter(text, y) {
+function drawText(text, y) {
   ctx.fillStyle = "white";
   ctx.font = "18px Arial";
   ctx.textAlign = "center";
@@ -174,22 +92,18 @@ function loop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   if (gameState === "start") {
-    drawTextCenter("Нажмите, чтобы начать", 360);
+    drawText("Нажмите, чтобы начать", 360);
   }
 
   if (gameState === "play") {
-    mandarins.forEach(drawMandarin);
     drawPlayer();
-  }
-
-  if (gameState === "gameover") {
-    drawTextCenter("Игра окончена", 340);
-    drawTextCenter("Поймано: " + score, 380);
   }
 
   update();
   requestAnimationFrame(loop);
 }
+
+loop();
 </script>
 </body>
 </html>
