@@ -42,8 +42,8 @@ function resize() {
 window.addEventListener("resize", resize);
 resize();
 
-/* ===== СОСТОЯНИЯ ===== */
-let state = "start"; // start | play | gameover
+/* ===== СОСТОЯНИЕ ===== */
+let state = "start";
 let score = 0;
 let lives = 5;
 let gameStartTime = 0;
@@ -60,9 +60,7 @@ canvas.addEventListener("touchmove", e => {
 });
 
 canvas.addEventListener("click", () => {
-  if (state === "start" || state === "gameover") {
-    restart();
-  }
+  if (state === "start" || state === "gameover") restart();
 });
 
 /* ===== ПЕРСОНАЖ ===== */
@@ -73,7 +71,7 @@ const player = {
 };
 
 /* ===== ЗВЁЗДЫ ===== */
-const stars = Array.from({ length: 90 }, () => ({
+const stars = Array.from({ length: 100 }, () => ({
   x: Math.random() * canvas.width,
   y: Math.random() * canvas.height * 0.5
 }));
@@ -82,22 +80,22 @@ function drawStars() {
   stars.forEach(s => ctx.fillRect(s.x, s.y, 2, 2));
 }
 
-/* ===== ФЕЙЕРВЕРК ===== */
-const fireworks = Array.from({ length: 5 }, () => ({
+/* ===== САЛЮТ (МНОГО) ===== */
+const fireworks = Array.from({ length: 14 }, () => ({
   x: Math.random() * canvas.width,
-  y: Math.random() * canvas.height * 0.4,
-  r: 16,
-  c: ["red","yellow","cyan","lime"][Math.floor(Math.random()*4)]
+  y: Math.random() * canvas.height * 0.45,
+  r: 14 + Math.random() * 10,
+  c: ["red","yellow","cyan","lime","magenta","orange"][Math.floor(Math.random()*6)]
 }));
 function drawFireworks() {
   fireworks.forEach(f => {
     ctx.strokeStyle = f.c;
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 10; i++) {
       ctx.beginPath();
       ctx.moveTo(f.x, f.y);
       ctx.lineTo(
-        f.x + Math.cos(i * Math.PI / 4) * f.r,
-        f.y + Math.sin(i * Math.PI / 4) * f.r
+        f.x + Math.cos(i * Math.PI / 5) * f.r,
+        f.y + Math.sin(i * Math.PI / 5) * f.r
       );
       ctx.stroke();
     }
@@ -160,21 +158,29 @@ function updateMandarins() {
 
 function drawMandarins() {
   mandarins.forEach(m => {
+    // тело
     ctx.fillStyle = "#ff8c00";
     ctx.beginPath();
     ctx.arc(m.x, m.y, 8, 0, Math.PI * 2);
     ctx.fill();
 
+    // долька
     ctx.strokeStyle = "#ffb347";
     ctx.beginPath();
     ctx.moveTo(m.x, m.y);
     ctx.lineTo(m.x + 6, m.y);
     ctx.stroke();
 
+    // блик
     ctx.fillStyle = "rgba(255,255,255,0.5)";
     ctx.beginPath();
     ctx.arc(m.x - 3, m.y - 3, 2, 0, Math.PI * 2);
     ctx.fill();
+
+    // листочки
+    ctx.fillStyle = "#2e8b57";
+    ctx.fillRect(m.x - 3, m.y - 12, 4, 6);
+    ctx.fillRect(m.x + 1, m.y - 11, 4, 5);
   });
 }
 
