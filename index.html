@@ -33,16 +33,25 @@ let gameState = "start";
 let score = 0;
 let lives = 5;
 let time = 0;
+let imageLoaded = false;
 
 /* ---------- ИЗОБРАЖЕНИЕ ПЕРСОНАЖА ---------- */
 const playerImage = new Image();
-playerImage.src =
-"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABVUAAAgACAYAAAAmDtM7AAAAAXNSR0IArs4c6Q...";
+playerImage.src = "character.png";
+
+playerImage.onload = () => {
+  imageLoaded = true;
+  requestAnimationFrame(loop);
+};
+
+playerImage.onerror = () => {
+  console.error("Не удалось загрузить изображение персонажа");
+};
 
 /* ---------- ПЕРСОНАЖ ---------- */
 const player = {
   x: canvas.width / 2,
-  y: canvas.height - 80,
+  y: canvas.height - 40,
   width: 96,
   height: 160,
   speed: 10
@@ -53,41 +62,11 @@ let mandarins = [];
 let mandarinSpeed = 1.2;
 let spawnDelay = 120;
 
-/* ---------- СНЕГ ---------- */
-const snowflakes = Array.from({ length: 80 }, () => ({
-  x: Math.random() * canvas.width,
-  y: Math.random() * canvas.height,
-  r: Math.random() * 2 + 1,
-  s: Math.random() * 1 + 0.5
-}));
-
-/* ---------- САЛЮТ ---------- */
-const fireworks = Array.from({ length: 12 }, () => ({
-  x: Math.random() * canvas.width,
-  y: Math.random() * canvas.height * 0.7,
-  r: Math.random() * 40 + 20
-}));
-
 /* ---------- УПРАВЛЕНИЕ ---------- */
 const keys = {};
 document.addEventListener("keydown", e => keys[e.key] = true);
 document.addEventListener("keyup", e => keys[e.key] = false);
 
-let touchStart = null;
-canvas.addEventListener("touchstart", e => {
-  touchStart = e.touches[0];
-  if (gameState !== "play") startGame();
-});
-
-canvas.addEventListener("touchmove", e => {
-  if (!touchStart) return;
-  const t = e.touches[0];
-  player.x += (t.clientX - touchStart.clientX) * 0.2;
-  player.y += (t.clientY - touchStart.clientY) * 0.2;
-  touchStart = t;
-});
-
-/* ---------- СТАРТ ---------- */
 canvas.addEventListener("click", () => {
   if (gameState !== "play") startGame();
 });
@@ -143,66 +122,44 @@ function update() {
 
   if (time % spawnDelay === 0) spawnMandarin();
 
-  if (time % 600 === 0 && spawnDelay > 40) {
-    spawnDelay -= 10;
-    mandarinSpeed += 0.4;
-  }
-
   if (keys["ArrowLeft"]) player.x -= player.speed;
   if (keys["ArrowRight"]) player.x += player.speed;
-  if (keys["ArrowUp"]) player.y -= player.speed;
-  if (keys["ArrowDown"]) player.y += player.speed;
 
-  player.x = Math.max(player.width / 2, Math.min(canvas.width - player.width / 2, player.x));
-  player.y = Math.max(player.height, Math.min(canvas.height - 20, player.y));
+  player.x = Math.max(
+    player.width / 2,
+    Math.min(canvas.width - player.width / 2, player.x)
+  );
 
   updateMandarins();
-
-  snowflakes.forEach(s => {
-    s.y += s.s;
-    if (s.y > canvas.height) s.y = -5;
-  });
 }
 
 /* ---------- РИСОВАНИЕ ---------- */
-function drawSnow() {
-  ctx.fillStyle = "white";
-  snowflakes.forEach(s => {
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-    ctx.fill();
-  });
-}
-
-function drawFireworks() {
-  fireworks.forEach(f => {
-    ctx.strokeStyle = "rgba(255,200,100,0.4)";
-    ctx.beginPath();
-    ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
-    ctx.stroke();
-  });
-}
-
 function drawMandarin(m) {
   ctx.fillStyle = "#ff8c00";
   ctx.beginPath();
   ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
   ctx.fill();
-
-  ctx.fillStyle = "#2ecc71";
-  ctx.beginPath();
-  ctx.ellipse(m.x + 4, m.y - 14, 6, 4, 0.4, 0, Math.PI * 2);
-  ctx.fill();
 }
 
 function drawPlayer() {
-  ctx.drawImage(
-    playerImage,
-    player.x - player.width / 2,
-    player.y - player.height,
-    player.width,
-    player.height
-  );
+  if (imageLoaded) {
+    ctx.drawImage(
+      playerImage,
+      player.x - player.width / 2,
+      player.y - player.height,
+      player.width,
+      player.height
+    );
+  } else {
+    /* Заглушка, если картинка не загрузилась */
+    ctx.fillStyle = "red";
+    ctx.fillRect(
+      player.x - player.width / 2,
+      player.y - player.height,
+      player.width,
+      player.height
+    );
+  }
 }
 
 function drawTextCenter(text, y) {
@@ -216,13 +173,8 @@ function drawTextCenter(text, y) {
 function loop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  drawFireworks();
-  drawSnow();
-
   if (gameState === "start") {
-    drawTextCenter("Твоя цель – собрать все мандарины", 280);
-    drawTextCenter("Управляй стрелками", 310);
-    drawTextCenter("Нажми, чтобы начать", 350);
+    drawTextCenter("Нажмите, чтобы начать", 360);
   }
 
   if (gameState === "play") {
@@ -231,16 +183,13 @@ function loop() {
   }
 
   if (gameState === "gameover") {
-    drawTextCenter("Игра окончена", 320);
-    drawTextCenter("Поймано: " + score, 360);
-    drawTextCenter("Нажмите для рестарта", 400);
+    drawTextCenter("Игра окончена", 340);
+    drawTextCenter("Поймано: " + score, 380);
   }
 
   update();
   requestAnimationFrame(loop);
 }
-
-loop();
 </script>
 </body>
 </html>
