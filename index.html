@@ -29,14 +29,15 @@ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 /* ---------- СОСТОЯНИЯ ---------- */
-let gameState = "start"; // start | play | gameover
+let gameState = "start";
 let score = 0;
 let lives = 5;
 let time = 0;
 
 /* ---------- ИЗОБРАЖЕНИЕ ПЕРСОНАЖА ---------- */
 const playerImage = new Image();
-playerImage.src = "character.png";
+playerImage.src =
+"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABVUAAAgACAYAAAAmDtM7AAAAAXNSR0IArs4c6Q...";
 
 /* ---------- ПЕРСОНАЖ ---------- */
 const player = {
@@ -114,7 +115,6 @@ function updateMandarins() {
   mandarins.forEach(m => {
     m.y += mandarinSpeed;
 
-    // столкновение
     if (
       m.x > player.x - player.width / 2 &&
       m.x < player.x + player.width / 2 &&
@@ -205,29 +205,6 @@ function drawPlayer() {
   );
 }
 
-function drawLives() {
-  ctx.fillStyle = "white";
-  ctx.font = "16px Arial";
-  ctx.fillText("Жизни", 12, 22);
-
-  for (let i = 0; i < lives; i++) {
-    const x = 18 + i * 26;
-    const y = 40;
-    ctx.fillStyle = "#0a8f2a";
-    ctx.beginPath();
-    ctx.moveTo(x, y + 16);
-    ctx.lineTo(x + 8, y);
-    ctx.lineTo(x + 16, y + 16);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.strokeStyle = "yellow";
-    ctx.beginPath();
-    ctx.arc(x + 8, y + 10, 6, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-}
-
 function drawTextCenter(text, y) {
   ctx.fillStyle = "white";
   ctx.font = "18px Arial";
@@ -235,7 +212,7 @@ function drawTextCenter(text, y) {
   ctx.fillText(text, canvas.width / 2, y);
 }
 
-/* ---------- ОСНОВНОЙ ЦИКЛ ---------- */
+/* ---------- ЦИКЛ ---------- */
 function loop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -244,21 +221,19 @@ function loop() {
 
   if (gameState === "start") {
     drawTextCenter("Твоя цель – собрать все мандарины", 280);
-    drawTextCenter("Управляй клавишами ↑ ↓ ← →", 310);
-    drawTextCenter("Нажми на экран, чтобы начать", 350);
+    drawTextCenter("Управляй стрелками", 310);
+    drawTextCenter("Нажми, чтобы начать", 350);
   }
 
   if (gameState === "play") {
     mandarins.forEach(drawMandarin);
     drawPlayer();
-    drawLives();
   }
 
   if (gameState === "gameover") {
-    drawTextCenter("Вы не смогли съесть все мандарины", 300);
-    drawTextCenter("Угостите родных и друзей", 330);
+    drawTextCenter("Игра окончена", 320);
     drawTextCenter("Поймано: " + score, 360);
-    drawTextCenter("Нажмите на экран для рестарта", 400);
+    drawTextCenter("Нажмите для рестарта", 400);
   }
 
   update();
