@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Мандарины</title>
 <style>
   body {
@@ -13,7 +13,6 @@
     align-items: center;
     font-family: Arial, sans-serif;
     color: white;
-    touch-action: none;
   }
   canvas {
     background: linear-gradient(#003366, #001a3a);
@@ -25,55 +24,32 @@
 <canvas id="game" width="420" height="740"></canvas>
 
 <script>
-/* ================= НАСТРОЙКИ ================= */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 /* ---------- СОСТОЯНИЯ ---------- */
 let gameState = "start";
 let score = 0;
-let lives = 5;
-let time = 0;
-let gameReady = false;
 
 /* ---------- ПЕРСОНАЖ ---------- */
 const player = {
   x: canvas.width / 2,
-  y: canvas.height - 40,
+  y: canvas.height - 30,
   width: 96,
   height: 160,
-  speed: 10
+  speed: 8
 };
 
-/* ---------- МАНДАРИНЫ ---------- */
-let mandarins = [];
-let mandarinSpeed = 1.2;
-let spawnDelay = 120;
-
-/* ---------- УПРАВЛЕНИЕ ---------- */
-const keys = {};
-document.addEventListener("keydown", e => keys[e.key] = true);
-document.addEventListener("keyup", e => keys[e.key] = false);
-
-canvas.addEventListener("click", () => {
-  if (gameState !== "play") startGame();
-});
-
-/* ================= ЗАГРУЗКА ПЕРСОНАЖА ================= */
-
+/* ---------- ЗАГРУЗКА ИЗОБРАЖЕНИЯ ---------- */
 const playerImage = new Image();
-let cleanPlayerCanvas = null;
+let cleanCanvas = null;
+let imageLoaded = false;
 
 playerImage.src = "character.png";
 
 playerImage.onload = () => {
-  cleanPlayerCanvas = removeWhiteBackground(playerImage);
-  gameReady = true;
-  requestAnimationFrame(loop); // старт ТОЛЬКО после готовности
-};
-
-playerImage.onerror = () => {
-  alert("Не удалось загрузить character.png");
+  cleanCanvas = removeWhiteBackground(playerImage);
+  imageLoaded = true;
 };
 
 /* ---------- УДАЛЕНИЕ БЕЛОГО ФОНА ---------- */
@@ -85,16 +61,11 @@ function removeWhiteBackground(img) {
 
   octx.drawImage(img, 0, 0);
   const imgData = octx.getImageData(0, 0, off.width, off.height);
-  const data = imgData.data;
+  const d = imgData.data;
 
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
-
-    // удаляем почти белый цвет
-    if (r > 235 && g > 235 && b > 235) {
-      data[i + 3] = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i] > 235 && d[i+1] > 235 && d[i+2] > 235) {
+      d[i+3] = 0;
     }
   }
 
@@ -102,61 +73,18 @@ function removeWhiteBackground(img) {
   return off;
 }
 
-/* ================= ЛОГИКА ================= */
+/* ---------- УПРАВЛЕНИЕ ---------- */
+const keys = {};
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
 
-function startGame() {
-  score = 0;
-  lives = 5;
-  mandarins = [];
-  time = 0;
-  mandarinSpeed = 1.2;
-  spawnDelay = 120;
+canvas.addEventListener("click", () => {
   gameState = "play";
-}
+});
 
-function spawnMandarin() {
-  mandarins.push({
-    x: Math.random() * (canvas.width - 40) + 20,
-    y: -30,
-    r: 16
-  });
-}
-
-function updateMandarins() {
-  mandarins.forEach(m => {
-    m.y += mandarinSpeed;
-
-    if (
-      m.x > player.x - player.width / 2 &&
-      m.x < player.x + player.width / 2 &&
-      m.y > player.y - player.height &&
-      m.y < player.y
-    ) {
-      score++;
-      m.caught = true;
-    }
-
-    if (m.y > canvas.height + 20) {
-      lives--;
-      m.missed = true;
-      if (lives <= 0) gameState = "gameover";
-    }
-  });
-
-  mandarins = mandarins.filter(m => !m.caught && !m.missed);
-}
-
+/* ---------- ОБНОВЛЕНИЕ ---------- */
 function update() {
   if (gameState !== "play") return;
-
-  time++;
-
-  if (time % spawnDelay === 0) spawnMandarin();
-
-  if (time % 600 === 0 && spawnDelay > 40) {
-    spawnDelay -= 10;
-    mandarinSpeed += 0.4;
-  }
 
   if (keys["ArrowLeft"]) player.x -= player.speed;
   if (keys["ArrowRight"]) player.x += player.speed;
@@ -165,67 +93,54 @@ function update() {
     player.width / 2,
     Math.min(canvas.width - player.width / 2, player.x)
   );
-
-  updateMandarins();
 }
 
-/* ================= РИСОВАНИЕ ================= */
-
-function drawMandarin(m) {
-  ctx.fillStyle = "#ff8c00";
-  ctx.beginPath();
-  ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = "#2ecc71";
-  ctx.beginPath();
-  ctx.ellipse(m.x + 4, m.y - 14, 6, 4, 0.4, 0, Math.PI * 2);
-  ctx.fill();
-}
-
+/* ---------- РИСОВАНИЕ ---------- */
 function drawPlayer() {
-  if (!gameReady || !cleanPlayerCanvas) return;
-
-  ctx.drawImage(
-    cleanPlayerCanvas,
-    player.x - player.width / 2,
-    player.y - player.height,
-    player.width,
-    player.height
-  );
+  if (imageLoaded && cleanCanvas) {
+    ctx.drawImage(
+      cleanCanvas,
+      player.x - player.width / 2,
+      player.y - player.height,
+      player.width,
+      player.height
+    );
+  } else {
+    // 🔴 Заглушка — чтобы игра ВСЕГДА работала
+    ctx.fillStyle = "red";
+    ctx.fillRect(
+      player.x - player.width / 2,
+      player.y - player.height,
+      player.width,
+      player.height
+    );
+  }
 }
 
-function drawTextCenter(text, y) {
+function drawText(text, y) {
   ctx.fillStyle = "white";
   ctx.font = "18px Arial";
   ctx.textAlign = "center";
   ctx.fillText(text, canvas.width / 2, y);
 }
 
-/* ================= ЦИКЛ ================= */
-
+/* ---------- ЦИКЛ ---------- */
 function loop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   if (gameState === "start") {
-    drawTextCenter("Твоя цель – собрать мандарины", 300);
-    drawTextCenter("Нажми, чтобы начать", 340);
+    drawText("Нажми, чтобы начать", 360);
   }
 
   if (gameState === "play") {
-    mandarins.forEach(drawMandarin);
     drawPlayer();
-  }
-
-  if (gameState === "gameover") {
-    drawTextCenter("Игра окончена", 320);
-    drawTextCenter("Поймано: " + score, 360);
-    drawTextCenter("Нажми для рестарта", 400);
   }
 
   update();
   requestAnimationFrame(loop);
 }
+
+loop();
 </script>
 </body>
 </html>
