@@ -42,8 +42,8 @@ function resize() {
 window.addEventListener("resize", resize);
 resize();
 
-/* ===== СОСТОЯНИЕ ===== */
-let state = "start";
+/* ===== СОСТОЯНИЯ ===== */
+let state = "start"; // start | play | gameover
 let score = 0;
 let lives = 5;
 let gameStartTime = 0;
@@ -54,9 +54,15 @@ window.addEventListener("keydown", e => keys[e.key] = true);
 window.addEventListener("keyup", e => keys[e.key] = false);
 
 canvas.addEventListener("touchmove", e => {
-  const t = e.touches[0];
-  player.x = t.clientX - canvas.getBoundingClientRect().left;
-  player.y = t.clientY - canvas.getBoundingClientRect().top;
+  const rect = canvas.getBoundingClientRect();
+  player.x = e.touches[0].clientX - rect.left;
+  player.y = e.touches[0].clientY - rect.top;
+});
+
+canvas.addEventListener("click", () => {
+  if (state === "start" || state === "gameover") {
+    restart();
+  }
 });
 
 /* ===== ПЕРСОНАЖ ===== */
@@ -81,7 +87,7 @@ const fireworks = Array.from({ length: 5 }, () => ({
   x: Math.random() * canvas.width,
   y: Math.random() * canvas.height * 0.4,
   r: 16,
-  c: ["red", "yellow", "cyan", "lime"][Math.floor(Math.random() * 4)]
+  c: ["red","yellow","cyan","lime"][Math.floor(Math.random()*4)]
 }));
 function drawFireworks() {
   fireworks.forEach(f => {
