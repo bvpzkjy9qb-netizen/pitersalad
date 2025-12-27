@@ -59,7 +59,7 @@ let mandarins = [];
 let mandarinSpeed = 1.5;
 let spawnDelay = 90;
 
-/* ---------- КЛАВИАТУРА ---------- */
+/* ---------- УПРАВЛЕНИЕ ---------- */
 const keys = {};
 document.addEventListener("keydown", e => keys[e.key] = true);
 document.addEventListener("keyup", e => keys[e.key] = false);
@@ -67,7 +67,7 @@ document.addEventListener("keyup", e => keys[e.key] = false);
 /* ---------- ТАЧ ---------- */
 let touchActive = false;
 
-canvas.addEventListener("touchstart", e => {
+canvas.addEventListener("touchstart", () => {
   touchActive = true;
   if (gameState !== "play") startGame();
 });
@@ -75,13 +75,10 @@ canvas.addEventListener("touchstart", e => {
 canvas.addEventListener("touchmove", e => {
   if (!touchActive || gameState !== "play") return;
   const rect = canvas.getBoundingClientRect();
-  const touchX = e.touches[0].clientX - rect.left;
-  player.x = touchX;
+  player.x = e.touches[0].clientX - rect.left;
 });
 
-canvas.addEventListener("touchend", () => {
-  touchActive = false;
-});
+canvas.addEventListener("touchend", () => touchActive = false);
 
 /* ---------- КЛИК ---------- */
 canvas.addEventListener("click", () => {
@@ -121,11 +118,9 @@ function update() {
     if (spawnDelay > 40) spawnDelay -= 5;
   }
 
-  // клавиатура
   if (keys["ArrowLeft"]) player.x -= player.speed;
   if (keys["ArrowRight"]) player.x += player.speed;
 
-  // ограничения
   player.x = Math.max(
     player.width / 2,
     Math.min(canvas.width - player.width / 2, player.x)
@@ -134,7 +129,6 @@ function update() {
   mandarins.forEach(m => {
     m.y += mandarinSpeed;
 
-    // поймал
     if (
       m.x > player.x - player.width / 2 &&
       m.x < player.x + player.width / 2 &&
@@ -145,7 +139,6 @@ function update() {
       score++;
     }
 
-    // пропустил
     if (m.y > canvas.height + 30 && !m.caught) {
       m.missed = true;
       lives--;
@@ -196,6 +189,12 @@ function drawHUD() {
   ctx.fillText("Жизни: " + lives, canvas.width - 12, 28);
 }
 
+/* ---------- ПЛАШКА ---------- */
+function drawOverlayBox(y, height) {
+  ctx.fillStyle = "rgba(0,0,0,0.6)";
+  ctx.fillRect(30, y, canvas.width - 60, height);
+}
+
 function drawTextCenter(text, y, size = 20) {
   ctx.fillStyle = "white";
   ctx.font = size + "px Arial";
@@ -210,9 +209,10 @@ function loop() {
   drawBackground();
 
   if (gameState === "start") {
+    drawOverlayBox(280, 170);
     drawTextCenter("Лови падающие мандарины", 330);
-    drawTextCenter("Веди персонажа пальцем", 360);
-    drawTextCenter("Нажми, чтобы начать", 400);
+    drawTextCenter("Веди персонажа пальцем", 360, 18);
+    drawTextCenter("Нажми, чтобы начать", 400, 18);
   }
 
   if (gameState === "play") {
@@ -222,18 +222,11 @@ function loop() {
   }
 
   if (gameState === "gameover") {
-    drawTextCenter(
-      "Вы не смогли съесть все мандарины,", 300, 18
-    );
-    drawTextCenter(
-      "отдайте их друзьям и семье", 330, 18
-    );
-    drawTextCenter(
-      "Поймано мандаринов: " + score, 380, 20
-    );
-    drawTextCenter(
-      "Нажмите, чтобы сыграть снова", 430, 18
-    );
+    drawOverlayBox(260, 220);
+    drawTextCenter("Вы не смогли съесть все мандарины,", 310, 18);
+    drawTextCenter("отдайте их друзьям и семье", 340, 18);
+    drawTextCenter("Поймано мандаринов: " + score, 390, 20);
+    drawTextCenter("Нажмите, чтобы сыграть снова", 440, 18);
   }
 
   update();
