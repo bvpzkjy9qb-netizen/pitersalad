@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Мандарины</title>
+<style>
+  body {
+    margin: 0;
+    background: black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  canvas {
+    border: 1px solid #222;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="game" width="420" height="740"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+/* ---------- ИЗОБРАЖЕНИЯ ---------- */
+const bgImage = new Image();
+bgImage.src = "background.png";
+
+const playerImage = new Image();
+playerImage.src = "character.png";
+
+let bgReady = false;
+let playerReady = false;
+
+bgImage.onload = () => bgReady = true;
+playerImage.onload = () => playerReady = true;
+
+bgImage.onerror = () => console.error("❌ Фон не загрузился");
+playerImage.onerror = () => console.error("❌ Персонаж не загрузился");
+
+/* ---------- ИГРА ---------- */
+let gameState = "start";
+let score = 0;
+let lives = 5;
+
+const player = {
+  x: canvas.width / 2,
+  y: canvas.height - 30,
+  width: 96,
+  height: 160,
+  speed: 8
+};
+
+/* ---------- УПРАВЛЕНИЕ ---------- */
+const keys = {};
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+canvas.addEventListener("click", () => {
+  if (gameState !== "play") gameState = "play";
+});
+
+/* ---------- ОБНОВЛЕНИЕ ---------- */
+function update() {
+  if (gameState !== "play") return;
+
+  if (keys["ArrowLeft"]) player.x -= player.speed;
+  if (keys["ArrowRight"]) player.x += player.speed;
+
+  player.x = Math.max(
+    player.width / 2,
+    Math.min(canvas.width - player.width / 2, player.x)
+  );
+}
+
+/* ---------- РИСОВАНИЕ ---------- */
+function drawBackground() {
+  if (bgReady) {
+    ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+  } else {
+    ctx.fillStyle = "#001a3a";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+}
+
+function drawPlayer() {
+  if (!playerReady) return;
+
+  ctx.drawImage(
+    playerImage,
+    player.x - player.width / 2,
+    player.y - player.height,
+    player.width,
+    player.height
+  );
+}
+
+function drawText(text, y) {
+  ctx.fillStyle = "white";
+  ctx.font = "18px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText(text, canvas.width / 2, y);
+}
+
+/* ---------- ЦИКЛ ---------- */
+function loop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  drawBackground();
+
+  if (gameState === "start") {
+    drawText("Нажми, чтобы начать", 360);
+  }
+
+  if (gameState === "play") {
+    drawPlayer();
+  }
+
+  update();
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>
