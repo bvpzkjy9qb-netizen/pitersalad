@@ -15,7 +15,7 @@
     color: white;
   }
   canvas {
-    background: linear-gradient(#003366, #001a3a);
+    background: black;
   }
 </style>
 </head>
@@ -29,7 +29,12 @@ const ctx = canvas.getContext("2d");
 
 /* ---------- СОСТОЯНИЯ ---------- */
 let gameState = "start";
-let score = 0;
+
+/* ---------- ФОН ---------- */
+const bgImage = new Image();
+let bgLoaded = false;
+bgImage.src = "Изображение 3.jpg";
+bgImage.onload = () => bgLoaded = true;
 
 /* ---------- ПЕРСОНАЖ ---------- */
 const player = {
@@ -40,13 +45,12 @@ const player = {
   speed: 8
 };
 
-/* ---------- ЗАГРУЗКА ИЗОБРАЖЕНИЯ ---------- */
+/* ---------- ИЗОБРАЖЕНИЕ ПЕРСОНАЖА ---------- */
 const playerImage = new Image();
 let cleanCanvas = null;
 let imageLoaded = false;
 
 playerImage.src = "character.png";
-
 playerImage.onload = () => {
   cleanCanvas = removeWhiteBackground(playerImage);
   imageLoaded = true;
@@ -96,6 +100,17 @@ function update() {
 }
 
 /* ---------- РИСОВАНИЕ ---------- */
+function drawBackground() {
+  if (!bgLoaded) return;
+
+  ctx.drawImage(
+    bgImage,
+    0, 0,
+    canvas.width,
+    canvas.height
+  );
+}
+
 function drawPlayer() {
   if (imageLoaded && cleanCanvas) {
     ctx.drawImage(
@@ -106,7 +121,7 @@ function drawPlayer() {
       player.height
     );
   } else {
-    // 🔴 Заглушка — чтобы игра ВСЕГДА работала
+    // запасной вариант
     ctx.fillStyle = "red";
     ctx.fillRect(
       player.x - player.width / 2,
@@ -127,6 +142,8 @@ function drawText(text, y) {
 /* ---------- ЦИКЛ ---------- */
 function loop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  drawBackground();
 
   if (gameState === "start") {
     drawText("Нажми, чтобы начать", 360);
