@@ -38,14 +38,38 @@ playerImage.src =
 let imageReady = false;
 playerImage.onload = () => imageReady = true;
 
-/* ---------- ПЕРСОНАЖ ---------- */
-const player = {
-  x: canvas.width / 2,
-  y: canvas.height - 30,
-  width: 96,
-  height: 160,
-  speed: 8
+/* ---------- ИЗОБРАЖЕНИЕ ПЕРСОНАЖА БЕЗ ФОНА ---------- */
+const playerImage = new Image();
+let cleanPlayerCanvas = null;
+
+playerImage.src = "character.png";
+
+playerImage.onload = () => {
+  cleanPlayerCanvas = removeWhiteBackground(playerImage);
 };
+  function removeWhiteBackground(img) {
+  const off = document.createElement("canvas");
+  off.width = img.width;
+  off.height = img.height;
+  const octx = off.getContext("2d");
+
+  octx.drawImage(img, 0, 0);
+  const imgData = octx.getImageData(0, 0, off.width, off.height);
+  const data = imgData.data;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+
+    if (r > 240 && g > 240 && b > 240) {
+      data[i + 3] = 0;
+    }
+  }
+
+  octx.putImageData(imgData, 0, 0);
+  return off;
+}
 
 /* ---------- УПРАВЛЕНИЕ ---------- */
 const keys = {};
@@ -69,10 +93,10 @@ function update() {
 
 /* ---------- РИСОВАНИЕ ---------- */
 function drawPlayer() {
-  if (!imageReady) return;
+  if (!cleanPlayerCanvas) return;
 
   ctx.drawImage(
-    playerImage,
+    cleanPlayerCanvas,
     player.x - player.width / 2,
     player.y - player.height,
     player.width,
