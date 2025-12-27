@@ -11,6 +11,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    touch-action: none;
   }
   canvas {
     border: 1px solid #222;
@@ -38,14 +39,13 @@ let playerReady = false;
 bgImage.onload = () => bgReady = true;
 playerImage.onload = () => playerReady = true;
 
-bgImage.onerror = () => console.error("❌ Фон не загрузился");
-playerImage.onerror = () => console.error("❌ Персонаж не загрузился");
-
-/* ---------- ИГРА ---------- */
-let gameState = "start";
+/* ---------- СОСТОЯНИЕ ---------- */
+let gameState = "start"; // start | play | gameover
 let score = 0;
 let lives = 5;
+let time = 0;
 
+/* ---------- ПЕРСОНАЖ ---------- */
 const player = {
   x: canvas.width / 2,
   y: canvas.height - 30,
@@ -54,41 +54,117 @@ const player = {
   speed: 8
 };
 
-/* ---------- УПРАВЛЕНИЕ ---------- */
+/* ---------- МАНДАРИНЫ ---------- */
+let mandarins = [];
+let mandarinSpeed = 1.5;
+let spawnDelay = 90;
+
+/* ---------- КЛАВИАТУРА ---------- */
 const keys = {};
 document.addEventListener("keydown", e => keys[e.key] = true);
 document.addEventListener("keyup", e => keys[e.key] = false);
 
-canvas.addEventListener("click", () => {
-  if (gameState !== "play") gameState = "play";
+/* ---------- ТАЧ ---------- */
+let touchActive = false;
+
+canvas.addEventListener("touchstart", e => {
+  touchActive = true;
+  if (gameState !== "play") startGame();
 });
+
+canvas.addEventListener("touchmove", e => {
+  if (!touchActive || gameState !== "play") return;
+  const rect = canvas.getBoundingClientRect();
+  const touchX = e.touches[0].clientX - rect.left;
+  player.x = touchX;
+});
+
+canvas.addEventListener("touchend", () => {
+  touchActive = false;
+});
+
+/* ---------- КЛИК ---------- */
+canvas.addEventListener("click", () => {
+  if (gameState !== "play") startGame();
+});
+
+/* ---------- СТАРТ ---------- */
+function startGame() {
+  score = 0;
+  lives = 5;
+  time = 0;
+  mandarins = [];
+  mandarinSpeed = 1.5;
+  spawnDelay = 90;
+  gameState = "play";
+}
+
+/* ---------- МАНДАРИН ---------- */
+function spawnMandarin() {
+  mandarins.push({
+    x: Math.random() * (canvas.width - 40) + 20,
+    y: -30,
+    r: 16
+  });
+}
 
 /* ---------- ОБНОВЛЕНИЕ ---------- */
 function update() {
   if (gameState !== "play") return;
 
+  time++;
+
+  if (time % spawnDelay === 0) spawnMandarin();
+
+  if (time % 600 === 0) {
+    mandarinSpeed += 0.4;
+    if (spawnDelay > 40) spawnDelay -= 5;
+  }
+
+  // клавиатура
   if (keys["ArrowLeft"]) player.x -= player.speed;
   if (keys["ArrowRight"]) player.x += player.speed;
 
+  // ограничения
   player.x = Math.max(
     player.width / 2,
     Math.min(canvas.width - player.width / 2, player.x)
   );
+
+  mandarins.forEach(m => {
+    m.y += mandarinSpeed;
+
+    // поймал
+    if (
+      m.x > player.x - player.width / 2 &&
+      m.x < player.x + player.width / 2 &&
+      m.y > player.y - player.height &&
+      m.y < player.y
+    ) {
+      m.caught = true;
+      score++;
+    }
+
+    // пропустил
+    if (m.y > canvas.height + 30 && !m.caught) {
+      m.missed = true;
+      lives--;
+      if (lives <= 0) gameState = "gameover";
+    }
+  });
+
+  mandarins = mandarins.filter(m => !m.caught && !m.missed);
 }
 
 /* ---------- РИСОВАНИЕ ---------- */
 function drawBackground() {
   if (bgReady) {
     ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
-  } else {
-    ctx.fillStyle = "#001a3a";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 }
 
 function drawPlayer() {
   if (!playerReady) return;
-
   ctx.drawImage(
     playerImage,
     player.x - player.width / 2,
@@ -98,9 +174,31 @@ function drawPlayer() {
   );
 }
 
-function drawText(text, y) {
+function drawMandarin(m) {
+  ctx.fillStyle = "#ff8c00";
+  ctx.beginPath();
+  ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#2ecc71";
+  ctx.beginPath();
+  ctx.ellipse(m.x + 5, m.y - 12, 6, 4, 0.4, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawHUD() {
   ctx.fillStyle = "white";
   ctx.font = "18px Arial";
+  ctx.textAlign = "left";
+  ctx.fillText("Поймано: " + score, 12, 28);
+
+  ctx.textAlign = "right";
+  ctx.fillText("Жизни: " + lives, canvas.width - 12, 28);
+}
+
+function drawTextCenter(text, y, size = 20) {
+  ctx.fillStyle = "white";
+  ctx.font = size + "px Arial";
   ctx.textAlign = "center";
   ctx.fillText(text, canvas.width / 2, y);
 }
@@ -112,11 +210,30 @@ function loop() {
   drawBackground();
 
   if (gameState === "start") {
-    drawText("Нажми, чтобы начать", 360);
+    drawTextCenter("Лови падающие мандарины", 330);
+    drawTextCenter("Веди персонажа пальцем", 360);
+    drawTextCenter("Нажми, чтобы начать", 400);
   }
 
   if (gameState === "play") {
+    mandarins.forEach(drawMandarin);
     drawPlayer();
+    drawHUD();
+  }
+
+  if (gameState === "gameover") {
+    drawTextCenter(
+      "Вы не смогли съесть все мандарины,", 300, 18
+    );
+    drawTextCenter(
+      "отдайте их друзьям и семье", 330, 18
+    );
+    drawTextCenter(
+      "Поймано мандаринов: " + score, 380, 20
+    );
+    drawTextCenter(
+      "Нажмите, чтобы сыграть снова", 430, 18
+    );
   }
 
   update();
