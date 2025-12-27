@@ -1,303 +1,271 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<title>Мандариновый петербуржец</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Мандарины</title>
 <style>
-html, body {
-  margin: 0;
-  padding: 0;
-  background: #0b1d4d;
-  overflow: hidden;
-  font-family: Arial, sans-serif;
-}
-canvas {
-  display: block;
-  margin: 0 auto;
-  image-rendering: pixelated;
-}
+  body {
+    margin: 0;
+    background: #001a3a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: Arial, sans-serif;
+    color: white;
+    touch-action: none;
+  }
+  canvas {
+    background: linear-gradient(#003366, #001a3a);
+  }
 </style>
 </head>
 <body>
 
-<canvas id="game"></canvas>
+<canvas id="game" width="420" height="740"></canvas>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-/* ===== ЭКРАН ===== */
-const RATIO = 9 / 16;
-function resize() {
-  let h = window.innerHeight;
-  let w = h * RATIO;
-  if (w > window.innerWidth) {
-    w = window.innerWidth;
-    h = w / RATIO;
-  }
-  canvas.width = w;
-  canvas.height = h;
-}
-window.addEventListener("resize", resize);
-resize();
-
-/* ===== СОСТОЯНИЕ ===== */
-let state = "start";
+/* ---------- СОСТОЯНИЯ ---------- */
+let gameState = "start"; // start | play | gameover
 let score = 0;
 let lives = 5;
-let tick = 0;
+let time = 0;
 
-/* ===== УПРАВЛЕНИЕ ===== */
-const keys = {};
-window.addEventListener("keydown", e => keys[e.key] = true);
-window.addEventListener("keyup", e => keys[e.key] = false);
+/* ---------- ИЗОБРАЖЕНИЕ ПЕРСОНАЖА ---------- */
+const playerImage = new Image();
+playerImage.src = "character.png";
 
-canvas.addEventListener("touchmove", e => {
-  const r = canvas.getBoundingClientRect();
-  player.x = e.touches[0].clientX - r.left;
-  player.y = e.touches[0].clientY - r.top;
-});
-
-canvas.addEventListener("click", () => {
-  if (state !== "play") restart();
-});
-
-/* ===== ПЕРСОНАЖ (РАЗМЕР КАК БЫЛ, СКОРОСТЬ ↑) ===== */
+/* ---------- ПЕРСОНАЖ ---------- */
 const player = {
   x: canvas.width / 2,
-  y: canvas.height - 220,
-  speed: 9.5
+  y: canvas.height - 80,
+  width: 96,
+  height: 160,
+  speed: 10
 };
 
-/* ===== ЗВЁЗДЫ ===== */
-const stars = Array.from({ length: 180 }, () => ({
-  x: Math.random() * canvas.width,
-  y: Math.random() * canvas.height,
-  s: Math.random() * 2 + 1
-}));
-function drawStars() {
-  ctx.fillStyle = "white";
-  stars.forEach(s => ctx.fillRect(s.x, s.y, s.s, s.s));
-}
-
-/* ===== САЛЮТЫ ===== */
-const fireworks = Array.from({ length: 40 }, () => ({
-  x: Math.random() * canvas.width,
-  y: Math.random() * canvas.height,
-  base: 18 + Math.random() * 10,
-  phase: Math.random() * Math.PI * 2,
-  color: ["#ff5252","#ffd740","#40c4ff","#69f0ae","#e040fb","#ffffff"]
-          [Math.floor(Math.random()*6)]
-}));
-function drawFireworks() {
-  fireworks.forEach(f => {
-    f.phase += 0.04;
-    const r = f.base + Math.sin(f.phase) * 4;
-    ctx.strokeStyle = f.color;
-    ctx.lineWidth = 2;
-    ctx.shadowColor = f.color;
-    ctx.shadowBlur = 10;
-    for (let i = 0; i < 12; i++) {
-      ctx.beginPath();
-      ctx.moveTo(f.x, f.y);
-      ctx.lineTo(
-        f.x + Math.cos(i * Math.PI / 6) * r,
-        f.y + Math.sin(i * Math.PI / 6) * r
-      );
-      ctx.stroke();
-    }
-    ctx.shadowBlur = 0;
-  });
-}
-
-/* ===== СНЕГ ===== */
-let snow = [];
-function spawnSnow() {
-  snow.push({ x: Math.random() * canvas.width, y: -5, v: 1 });
-}
-function updateSnow() {
-  snow.forEach(s => s.y += s.v);
-  snow = snow.filter(s => s.y < canvas.height);
-}
-function drawSnow() {
-  ctx.fillStyle = "rgba(255,255,255,0.9)";
-  snow.forEach(s => ctx.fillRect(s.x, s.y, 2, 2));
-}
-
-/* ===== МАНДАРИНЫ (РАЗМЕР КАК БЫЛ, СКОРОСТЬ ↑) ===== */
+/* ---------- МАНДАРИНЫ ---------- */
 let mandarins = [];
-function spawnMandarin() {
-  mandarins.push({
-    x: Math.random() * canvas.width,
-    y: -40,
-    speed: 3.8,
-    spawnTime: performance.now()
-  });
-}
-function updateMandarins() {
-  const now = performance.now();
-  mandarins.forEach(m => {
-    if (now - m.spawnTime > 400) m.y += m.speed;
-  });
+let mandarinSpeed = 1.2;
+let spawnDelay = 120;
 
-  mandarins = mandarins.filter(m => {
-    if (m.y > canvas.height) { lives--; return false; }
-    if (Math.hypot(m.x - player.x, m.y - player.y) < 44) {
-      score++; return false;
-    }
-    return true;
-  });
-}
-function drawMandarins() {
-  mandarins.forEach(m => {
-    ctx.fillStyle = "#ff8c00";
-    ctx.beginPath();
-    ctx.arc(m.x, m.y, 16, 0, Math.PI * 2);
-    ctx.fill();
+/* ---------- СНЕГ ---------- */
+const snowflakes = Array.from({ length: 80 }, () => ({
+  x: Math.random() * canvas.width,
+  y: Math.random() * canvas.height,
+  r: Math.random() * 2 + 1,
+  s: Math.random() * 1 + 0.5
+}));
 
-    ctx.fillStyle = "rgba(255,255,255,0.5)";
-    ctx.beginPath();
-    ctx.arc(m.x - 5, m.y - 5, 4, 0, Math.PI * 2);
-    ctx.fill();
+/* ---------- САЛЮТ ---------- */
+const fireworks = Array.from({ length: 12 }, () => ({
+  x: Math.random() * canvas.width,
+  y: Math.random() * canvas.height * 0.7,
+  r: Math.random() * 40 + 20
+}));
 
-    ctx.strokeStyle = "#5a3a1a";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(m.x, m.y - 16);
-    ctx.lineTo(m.x, m.y - 22);
-    ctx.stroke();
+/* ---------- УПРАВЛЕНИЕ ---------- */
+const keys = {};
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
 
-    ctx.fillStyle = "#2e8b57";
-    ctx.beginPath();
-    ctx.ellipse(m.x - 7, m.y - 22, 6, 4, -0.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(m.x + 7, m.y - 22, 6, 4, 0.5, 0, Math.PI * 2);
-    ctx.fill();
-  });
-}
+let touchStart = null;
+canvas.addEventListener("touchstart", e => {
+  touchStart = e.touches[0];
+  if (gameState !== "play") startGame();
+});
 
-/* ===== ЁЛКИ-ЖИЗНИ ===== */
-function drawTree(x, y) {
-  ctx.fillStyle = "#0a7a2e";
-  for (let i = 0; i < 3; i++) {
-    ctx.beginPath();
-    ctx.moveTo(x, y + i * 8);
-    ctx.lineTo(x + 8 + i * 3, y + 10 + i * 8);
-    ctx.lineTo(x - 8 - i * 3, y + 10 + i * 8);
-    ctx.fill();
-  }
-}
-function drawLives() {
-  ctx.fillStyle = "white";
-  ctx.font = "16px Arial";
-  ctx.textAlign = "left";
-  ctx.fillText("Жизни", 10, 28);
-  for (let i = 0; i < lives; i++) drawTree(18 + i * 22, 36);
-}
+canvas.addEventListener("touchmove", e => {
+  if (!touchStart) return;
+  const t = e.touches[0];
+  player.x += (t.clientX - touchStart.clientX) * 0.2;
+  player.y += (t.clientY - touchStart.clientY) * 0.2;
+  touchStart = t;
+});
 
-/* ===== ПЕРСОНАЖ ===== */
-function drawPlayer() {
-  const x = player.x;
-  const y = player.y;
+/* ---------- СТАРТ ---------- */
+canvas.addEventListener("click", () => {
+  if (gameState !== "play") startGame();
+});
 
-  ctx.fillStyle = "#f1c27d";
-  ctx.fillRect(x - 18, y - 80, 36, 36);
-
-  ctx.fillStyle = "#000";
-  ctx.fillRect(x - 7, y - 64, 4, 4);
-  ctx.fillRect(x + 3, y - 64, 4, 4);
-  ctx.fillRect(x - 6, y - 52, 12, 3);
-
-  ctx.fillStyle = "#7a0000";
-  ctx.fillRect(x - 20, y - 98, 40, 14);
-  ctx.fillRect(x - 16, y - 114, 32, 16);
-
-  ctx.fillStyle = "#cc0000";
-  ctx.fillRect(x - 22, y - 44, 44, 10);
-
-  ctx.fillStyle = "#3b3f4f";
-  ctx.fillRect(x - 24, y - 34, 48, 64);
-
-  ctx.fillStyle = "#2b4a7f";
-  ctx.fillRect(x - 16, y + 30, 14, 30);
-  ctx.fillRect(x + 2, y + 30, 14, 30);
-
-  ctx.fillStyle = "#111";
-  ctx.fillRect(x - 18, y + 60, 16, 10);
-  ctx.fillRect(x + 2, y + 60, 16, 10);
-}
-
-/* ===== ЛОГИКА ===== */
-function restart() {
-  state = "play";
+function startGame() {
   score = 0;
   lives = 5;
   mandarins = [];
+  time = 0;
+  mandarinSpeed = 1.2;
+  spawnDelay = 120;
+  gameState = "play";
 }
 
-function update() {
-  if (Math.random() < 0.5) spawnSnow();
-  updateSnow();
+/* ---------- ЛОГИКА ---------- */
+function spawnMandarin() {
+  mandarins.push({
+    x: Math.random() * (canvas.width - 40) + 20,
+    y: -30,
+    r: 16
+  });
+}
 
-  if (state !== "play") return;
+function updateMandarins() {
+  mandarins.forEach(m => {
+    m.y += mandarinSpeed;
+
+    // столкновение
+    if (
+      m.x > player.x - player.width / 2 &&
+      m.x < player.x + player.width / 2 &&
+      m.y > player.y - player.height &&
+      m.y < player.y
+    ) {
+      score++;
+      m.caught = true;
+    }
+
+    if (m.y > canvas.height + 20) {
+      lives--;
+      m.missed = true;
+      if (lives <= 0) gameState = "gameover";
+    }
+  });
+
+  mandarins = mandarins.filter(m => !m.caught && !m.missed);
+}
+
+/* ---------- ОБНОВЛЕНИЕ ---------- */
+function update() {
+  if (gameState !== "play") return;
+
+  time++;
+
+  if (time % spawnDelay === 0) spawnMandarin();
+
+  if (time % 600 === 0 && spawnDelay > 40) {
+    spawnDelay -= 10;
+    mandarinSpeed += 0.4;
+  }
 
   if (keys["ArrowLeft"]) player.x -= player.speed;
   if (keys["ArrowRight"]) player.x += player.speed;
   if (keys["ArrowUp"]) player.y -= player.speed;
   if (keys["ArrowDown"]) player.y += player.speed;
 
-  player.x = Math.max(30, Math.min(canvas.width - 30, player.x));
-  player.y = Math.max(120, Math.min(canvas.height - 80, player.y));
+  player.x = Math.max(player.width / 2, Math.min(canvas.width - player.width / 2, player.x));
+  player.y = Math.max(player.height, Math.min(canvas.height - 20, player.y));
 
-  if (Math.random() < 0.05) spawnMandarin();
   updateMandarins();
 
-  if (lives <= 0) state = "gameover";
+  snowflakes.forEach(s => {
+    s.y += s.s;
+    if (s.y > canvas.height) s.y = -5;
+  });
 }
 
-function draw() {
-  ctx.fillStyle = "#0b1d4d";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+/* ---------- РИСОВАНИЕ ---------- */
+function drawSnow() {
+  ctx.fillStyle = "white";
+  snowflakes.forEach(s => {
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
 
-  drawStars();
+function drawFireworks() {
+  fireworks.forEach(f => {
+    ctx.strokeStyle = "rgba(255,200,100,0.4)";
+    ctx.beginPath();
+    ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+}
+
+function drawMandarin(m) {
+  ctx.fillStyle = "#ff8c00";
+  ctx.beginPath();
+  ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#2ecc71";
+  ctx.beginPath();
+  ctx.ellipse(m.x + 4, m.y - 14, 6, 4, 0.4, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawPlayer() {
+  ctx.drawImage(
+    playerImage,
+    player.x - player.width / 2,
+    player.y - player.height,
+    player.width,
+    player.height
+  );
+}
+
+function drawLives() {
+  ctx.fillStyle = "white";
+  ctx.font = "16px Arial";
+  ctx.fillText("Жизни", 12, 22);
+
+  for (let i = 0; i < lives; i++) {
+    const x = 18 + i * 26;
+    const y = 40;
+    ctx.fillStyle = "#0a8f2a";
+    ctx.beginPath();
+    ctx.moveTo(x, y + 16);
+    ctx.lineTo(x + 8, y);
+    ctx.lineTo(x + 16, y + 16);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = "yellow";
+    ctx.beginPath();
+    ctx.arc(x + 8, y + 10, 6, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+function drawTextCenter(text, y) {
+  ctx.fillStyle = "white";
+  ctx.font = "18px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText(text, canvas.width / 2, y);
+}
+
+/* ---------- ОСНОВНОЙ ЦИКЛ ---------- */
+function loop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
   drawFireworks();
   drawSnow();
-  drawMandarins();
 
-  if (state === "start") {
-    ctx.fillStyle = "white";
-    ctx.textAlign = "center";
-    ctx.font = "18px Arial";
-    ctx.fillText("Твоя цель — собрать все мандарины", canvas.width/2, canvas.height/2 - 30);
-    ctx.fillText("Управление: стрелки", canvas.width/2, canvas.height/2);
-    ctx.fillText("Нажмите на экран, чтобы начать", canvas.width/2, canvas.height/2 + 40);
+  if (gameState === "start") {
+    drawTextCenter("Твоя цель – собрать все мандарины", 280);
+    drawTextCenter("Управляй клавишами ↑ ↓ ← →", 310);
+    drawTextCenter("Нажми на экран, чтобы начать", 350);
   }
 
-  if (state === "play") {
+  if (gameState === "play") {
+    mandarins.forEach(drawMandarin);
     drawPlayer();
     drawLives();
   }
 
-  if (state === "gameover") {
-    ctx.fillStyle = "white";
-    ctx.textAlign = "center";
-    ctx.font = "18px Arial";
-    ctx.fillText("Вы не смогли съесть все мандарины,", canvas.width/2, canvas.height/2 - 40);
-    ctx.fillText("угостите родных и друзей.", canvas.width/2, canvas.height/2 - 10);
-    ctx.fillText("Поймано: " + score, canvas.width/2, canvas.height/2 + 30);
-    ctx.fillText("Нажмите на экран, чтобы начать заново", canvas.width/2, canvas.height/2 + 70);
+  if (gameState === "gameover") {
+    drawTextCenter("Вы не смогли съесть все мандарины", 300);
+    drawTextCenter("Угостите родных и друзей", 330);
+    drawTextCenter("Поймано: " + score, 360);
+    drawTextCenter("Нажмите на экран для рестарта", 400);
   }
-}
 
-function loop() {
   update();
-  draw();
   requestAnimationFrame(loop);
 }
+
 loop();
 </script>
-
 </body>
 </html>
