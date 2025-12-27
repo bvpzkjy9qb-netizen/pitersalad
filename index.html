@@ -27,7 +27,7 @@ canvas {
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-/* ===== ВЕРТИКАЛЬНЫЙ ЭКРАН ===== */
+/* ===== ЭКРАН ===== */
 const RATIO = 9 / 16;
 function resize() {
   let h = window.innerHeight;
@@ -47,6 +47,7 @@ let state = "start";
 let score = 0;
 let lives = 5;
 let gameStartTime = 0;
+let tick = 0;
 
 /* ===== УПРАВЛЕНИЕ ===== */
 const keys = {};
@@ -54,13 +55,13 @@ window.addEventListener("keydown", e => keys[e.key] = true);
 window.addEventListener("keyup", e => keys[e.key] = false);
 
 canvas.addEventListener("touchmove", e => {
-  const rect = canvas.getBoundingClientRect();
-  player.x = e.touches[0].clientX - rect.left;
-  player.y = e.touches[0].clientY - rect.top;
+  const r = canvas.getBoundingClientRect();
+  player.x = e.touches[0].clientX - r.left;
+  player.y = e.touches[0].clientY - r.top;
 });
 
 canvas.addEventListener("click", () => {
-  if (state === "start" || state === "gameover") restart();
+  if (state !== "play") restart();
 });
 
 /* ===== ПЕРСОНАЖ ===== */
@@ -71,7 +72,7 @@ const player = {
 };
 
 /* ===== ЗВЁЗДЫ ===== */
-const stars = Array.from({ length: 140 }, () => ({
+const stars = Array.from({ length: 160 }, () => ({
   x: Math.random() * canvas.width,
   y: Math.random() * canvas.height,
   s: Math.random() * 2 + 1
@@ -81,24 +82,27 @@ function drawStars() {
   stars.forEach(s => ctx.fillRect(s.x, s.y, s.s, s.s));
 }
 
-/* ===== САЛЮТ ПО ВСЕМУ ЭКРАНУ ===== */
-const fireworks = Array.from({ length: 30 }, () => ({
+/* ===== САЛЮТЫ ПО ВСЕМУ ЭКРАНУ ===== */
+const fireworks = Array.from({ length: 36 }, () => ({
   x: Math.random() * canvas.width,
-  y: Math.random() * canvas.height * 0.9,
-  base: 14 + Math.random() * 12,
+  y: Math.random() * canvas.height,
+  base: 18 + Math.random() * 14,
   phase: Math.random() * Math.PI * 2,
   rot: Math.random() * Math.PI,
-  color: ["red","yellow","cyan","lime","magenta","orange","white"]
-          [Math.floor(Math.random()*7)]
+  color: ["#ff5252","#ffd740","#40c4ff","#69f0ae","#e040fb","#ffffff"]
+          [Math.floor(Math.random()*6)]
 }));
 
 function drawFireworks() {
   fireworks.forEach(f => {
-    f.phase += 0.03;
+    f.phase += 0.04;
     f.rot += 0.01;
-    const r = f.base + Math.sin(f.phase) * 4;
+    const r = f.base + Math.sin(f.phase) * 5;
+
     ctx.strokeStyle = f.color;
     ctx.lineWidth = 2;
+    ctx.shadowColor = f.color;
+    ctx.shadowBlur = 10;
 
     for (let i = 0; i < 12; i++) {
       ctx.beginPath();
@@ -109,6 +113,7 @@ function drawFireworks() {
       );
       ctx.stroke();
     }
+    ctx.shadowBlur = 0;
   });
 }
 
@@ -118,7 +123,7 @@ function spawnSnow() {
   snow.push({
     x: Math.random() * canvas.width,
     y: -5,
-    v: 0.6 + Math.random() * 1.8
+    v: 0.6 + Math.random() * 1.6
   });
 }
 function updateSnow() {
@@ -132,7 +137,6 @@ function drawSnow() {
 
 /* ===== МАНДАРИНЫ ===== */
 let mandarins = [];
-
 function spawnMandarin() {
   mandarins.push({
     x: Math.random() * canvas.width,
@@ -141,7 +145,6 @@ function spawnMandarin() {
     spawnTime: performance.now()
   });
 }
-
 function updateMandarins() {
   const now = performance.now();
   mandarins.forEach(m => {
@@ -149,18 +152,13 @@ function updateMandarins() {
   });
 
   mandarins = mandarins.filter(m => {
-    if (m.y > canvas.height) {
-      lives--;
-      return false;
-    }
+    if (m.y > canvas.height) { lives--; return false; }
     if (Math.hypot(m.x - player.x, m.y - player.y) < 36) {
-      score++;
-      return false;
+      score++; return false;
     }
     return true;
   });
 }
-
 function drawMandarins() {
   mandarins.forEach(m => {
     ctx.fillStyle = "#ff8c00";
@@ -190,45 +188,43 @@ function drawMandarins() {
   });
 }
 
-/* ===== ЁЛКИ (ЖИЗНИ) ===== */
-function drawLives() {
-  ctx.fillStyle = "white";
-  ctx.font = "16px Arial";
-  ctx.textAlign = "left";
-  ctx.fillText("Жизни", 12, 22);
+/* ===== РЕАЛИСТИЧНЫЕ ЁЛКИ ===== */
+function drawTree(x, y, blink) {
+  ctx.fillStyle = "#0a7a2e";
 
-  for (let i = 0; i < lives; i++) {
-    const x = 24 + i * 36;
-    const y = 30;
-
-    // ярусы
-    ctx.fillStyle = "#0a7a2e";
+  for (let i = 0; i < 3; i++) {
+    const w = 20 + i * 6;
+    const h = 16;
     ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + 16, y + 28);
-    ctx.lineTo(x - 16, y + 28);
+    ctx.moveTo(x, y + i * 12);
+    ctx.lineTo(x + w, y + h + i * 12);
+    ctx.lineTo(x - w, y + h + i * 12);
     ctx.fill();
+  }
 
-    ctx.beginPath();
-    ctx.moveTo(x, y + 12);
-    ctx.lineTo(x + 14, y + 40);
-    ctx.lineTo(x - 14, y + 40);
-    ctx.fill();
+  ctx.fillStyle = "#5a3a1a";
+  ctx.fillRect(x - 3, y + 48, 6, 8);
 
-    // ствол
-    ctx.fillStyle = "#5a3a1a";
-    ctx.fillRect(x - 3, y + 40, 6, 8);
-
-    // гирлянда
-    ["red","yellow","cyan","lime"].forEach((c, j) => {
+  const lights = ["red","yellow","cyan","lime"];
+  lights.forEach((c, i) => {
+    if ((tick + i) % 20 < 10 || !blink) {
       ctx.fillStyle = c;
       ctx.shadowColor = c;
       ctx.shadowBlur = 6;
       ctx.beginPath();
-      ctx.arc(x - 8 + j * 6, y + 24, 2, 0, Math.PI * 2);
+      ctx.arc(x - 10 + i * 7, y + 26, 2, 0, Math.PI * 2);
       ctx.fill();
-    });
-    ctx.shadowBlur = 0;
+    }
+  });
+  ctx.shadowBlur = 0;
+}
+
+function drawLives() {
+  ctx.fillStyle = "white";
+  ctx.font = "16px Arial";
+  ctx.fillText("Жизни", 12, 22);
+  for (let i = 0; i < lives; i++) {
+    drawTree(30 + i * 40, 30, true);
   }
 }
 
@@ -282,6 +278,7 @@ function restart() {
 }
 
 function update() {
+  tick++;
   if (Math.random() < 0.45) spawnSnow();
   updateSnow();
 
@@ -306,15 +303,14 @@ function draw() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   drawStars();
-  drawFireworks();
+  drawFireworks();   // <-- теперь реально по всему экрану
   drawSnow();
   drawMandarins();
 
   if (state === "start") {
     drawText([
       "Твоя цель — собрать все мандарины.",
-      "Управляй стрелками вверх, вниз,",
-      "влево и вправо.",
+      "Управляй стрелками.",
       "",
       "Нажмите на экран, чтобы начать"
     ], canvas.height / 2 - 60);
